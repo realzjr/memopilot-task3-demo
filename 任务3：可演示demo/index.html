@@ -351,20 +351,25 @@
       <div class="search"><span>🔍</span><input placeholder="搜索记忆 / 知识 / 项目"></div>
     </div>
 
-    <div class="side-label">工作台</div>
-    <nav class="nav" id="mainNav">
-      <button class="active" data-view="chat"><span class="ico">💬</span>对话助手</button>
-      <button data-view="projects"><span class="ico">📊</span>项目进展表</button>
-      <button data-view="memory"><span class="ico">🧠</span>记忆库 <span class="badge" id="memBadge">7</span></button>
-      <button data-view="kb"><span class="ico">📚</span>知识库</button>
-    </nav>
+    <div class="side-label collapsible" data-collapse="navBody">工作台 <span class="chev">▾</span></div>
+    <div class="collapse-body" id="navBody">
+      <nav class="nav" id="mainNav">
+        <button class="active" data-view="chat"><span class="ico">💬</span>对话助手</button>
+        <button data-view="projects"><span class="ico">📊</span>项目进展表</button>
+        <button data-view="memory"><span class="ico">🧠</span>记忆库 <span class="badge" id="memBadge">7</span></button>
+        <button data-view="kb"><span class="ico">📚</span>知识库</button>
+        <button data-view="settings"><span class="ico">⚙️</span>个人主页</button>
+      </nav>
+    </div>
 
-    <div class="side-label">进行中的项目</div>
-    <div style="padding:0 8px; overflow-y:auto;" id="sideProjects">
-      <div class="proj active"><span class="dot" style="background:var(--blue)"></span><span class="name">AI笔记 App 2.0</span><span class="mini">68%</span></div>
-      <div class="proj"><span class="dot" style="background:var(--purple)"></span><span class="name">官网改版</span><span class="mini">42%</span></div>
-      <div class="proj"><span class="dot" style="background:var(--orange)"></span><span class="name">用户增长实验</span><span class="mini">35%</span></div>
-      <div class="proj"><span class="dot" style="background:var(--green)"></span><span class="name">团队知识沉淀</span><span class="mini">81%</span></div>
+    <div class="side-label collapsible" data-collapse="projBody">进行中的项目 <span class="chev">▾</span></div>
+    <div class="collapse-body" id="projBody">
+      <div style="padding:0 8px; overflow-y:auto;" id="sideProjects">
+        <div class="proj active"><span class="dot" style="background:var(--blue)"></span><span class="name">AI笔记 App 2.0</span><span class="mini">68%</span></div>
+        <div class="proj"><span class="dot" style="background:var(--purple)"></span><span class="name">官网改版</span><span class="mini">42%</span></div>
+        <div class="proj"><span class="dot" style="background:var(--orange)"></span><span class="name">用户增长实验</span><span class="mini">35%</span></div>
+        <div class="proj"><span class="dot" style="background:var(--green)"></span><span class="name">团队知识沉淀</span><span class="mini">81%</span></div>
+      </div>
     </div>
 
     <div class="side-foot">
@@ -378,8 +383,7 @@
     <div class="titlebar">
       <h1 id="tbTitle">对话助手</h1>
       <span class="sub" id="tbSub">会话 1 · 9月3日 · 当前项目：AI笔记 App 2.0</span>
-      <span class="mode-badge" id="modeBadge">演示模式</span>
-      <button class="tbtn ghost" id="gearBtn" style="margin-left:auto;">⚙️ 接入 API</button>
+      <span class="mode-badge" id="modeBadge" style="margin-left:auto;">演示模式</span>
     </div>
 
     <!-- ========== 视图1：Chatbot（跨会话演示主舞台） ========== -->
