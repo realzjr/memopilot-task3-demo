@@ -1,0 +1,15 @@
+{
+  "user": { "id": "u1", "name": "默", "plan": "pro" },
+  "projects": [
+    { "id": "p1", "name": "AI笔记 App 2.0", "color": "#0A84FF", "status": "active", "progress": 68,
+      "next_milestone": "编辑器联调", "due": "2026-09-27", "risk": "mid",
+      "risk_note": "编辑器方案变更 → 存储层重写" },
+    { "id": "p2", "name": "官网改版", "color": "#BF5AF2", "status": "risk", "progress": 42,
+      "next_milestone": "视觉稿终评", "due": "2026-09-12", "risk": "high",
+      "risk_note": "客户案例素材延期" },
+    { "id": "p3", "name": "用户增长实验", "color": "#FF9F0A", "status": "active", "progress": 35,
+      "next_milestone": "A/B 实验 Readout", "due": "2026-09-18", "risk": "low", "risk_note": null },
+    { "id": "p4", "name": "团队知识沉淀", "color": "#30D158", "status": "active", "progress": 81,
+      "next_milestone": "Q3 知识盘点", "due": "2026-09-30", "risk": "low", "risk_note": null }
+  ]
+}

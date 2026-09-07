@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MemoPilot · 多项目管理助手</title>
+<style>
+  /* ============ 基础与桌面背景 ============ */
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-font-smoothing:antialiased; }
+  :root{
+    --blue:#0A84FF; --blue-press:#0066D6;
+    --green:#30D158; --yellow:#FFD60A; --orange:#FF9F0A; --red:#FF453A; --purple:#BF5AF2; --teal:#64D2FF;
+    --text-1:#1d1d1f; --text-2:#6e6e73; --text-3:#aeaeb2;
+    --hairline:rgba(0,0,0,.08);
+    --sidebar-bg:rgba(246,246,248,.82);
+    --content-bg:#ffffff;
+    --radius:12px;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  }
+  html,body{ height:100%; }
+  body{
+    font-family:var(--font); color:var(--text-1); font-size:13px;
+    display:flex; align-items:center; justify-content:center;
+    background:
+      radial-gradient(1200px 800px at 15% 10%, #7db8ff 0%, transparent 55%),
+      radial-gradient(1000px 700px at 85% 20%, #c9a6ff 0%, transparent 55%),
+      radial-gradient(1100px 900px at 50% 95%, #ffb98a 0%, transparent 55%),
+      linear-gradient(160deg,#5e8ce6,#8f7ae0 55%,#d98cb3);
+    overflow:hidden;
+  }
+  /* ============ macOS 窗口 ============ */
+  .window{
+    width:min(1280px, 96vw); height:min(820px, 94vh);
+    background:var(--content-bg); border-radius:var(--radius);
+    box-shadow: 0 0 0 .5px rgba(0,0,0,.25), 0 22px 70px rgba(0,0,0,.45), 0 4px 18px rgba(0,0,0,.25);
+    display:flex; overflow:hidden; position:relative;
+  }
+  /* ============ 侧边栏 ============ */
+  .sidebar{
+    width:236px; flex-shrink:0; display:flex; flex-direction:column;
+    background:var(--sidebar-bg);
+    backdrop-filter:blur(28px) saturate(1.8); -webkit-backdrop-filter:blur(28px) saturate(1.8);
+    border-right:1px solid var(--hairline);
+  }
+  .traffic{ display:flex; gap:8px; padding:14px 14px 10px; }
+  .traffic i{ width:12px; height:12px; border-radius:50%; display:block; box-shadow:inset 0 0 1px rgba(0,0,0,.2); }
+  .traffic .c{ background:#FF5F57; } .traffic .m{ background:#FEBC2E; } .traffic .z{ background:#28C840; }
+  .search-wrap{ padding:2px 12px 12px; }
+  .search{
+    display:flex; align-items:center; gap:6px; height:28px; padding:0 8px;
+    background:rgba(0,0,0,.055); border-radius:8px; color:var(--text-2);
+  }
+  .search input{ border:none; outline:none; background:none; width:100%; font:inherit; color:var(--text-1); }
+  .side-label{ padding:14px 16px 4px; font-size:11px; font-weight:600; color:var(--text-3); }
+  .nav{ padding:0 8px; display:flex; flex-direction:column; gap:1px; }
+  .nav button{
+    display:flex; align-items:center; gap:8px; width:100%; padding:5px 8px; border:none; cursor:pointer;
+    background:none; border-radius:6px; font:inherit; color:var(--text-1); text-align:left;
+  }
+  .nav button:hover{ background:rgba(0,0,0,.045); }
+  .nav button.active{ background:rgba(0,0,0,.08); font-weight:600; }
+  .nav .badge{ margin-left:auto; font-size:11px; color:var(--text-2); background:rgba(0,0,0,.06); padding:1px 7px; border-radius:10px; }
+  .nav .ico{ width:16px; text-align:center; }
+  .proj{ display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:6px; cursor:pointer; }
+  .proj:hover{ background:rgba(0,0,0,.045); }
+  .proj.active{ background:rgba(10,132,255,.14); }
+  .proj .dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .proj .name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .proj .mini{ margin-left:auto; font-size:11px; color:var(--text-3); }
+  .side-foot{ margin-top:auto; padding:10px 12px; border-top:1px solid var(--hairline); display:flex; align-items:center; gap:8px; }
+  .avatar{ width:26px; height:26px; border-radius:50%; background:linear-gradient(135deg,#64D2FF,#BF5AF2); display:flex; align-items:center; justify-content:center; color:#fff; font-size:12px; font-weight:600; }
+  .side-foot small{ color:var(--text-2); display:block; font-size:11px; }
+
+  /* ============ 主内容 ============ */
+  .main{ flex:1; display:flex; flex-direction:column; min-width:0; }
+  .titlebar{
+    height:52px; flex-shrink:0; display:flex; align-items:center; gap:12px; padding:0 16px;
+    border-bottom:1px solid var(--hairline); background:rgba(255,255,255,.7);
+    backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+  }
+  .titlebar h1{ font-size:15px; font-weight:700; }
+  .titlebar .sub{ color:var(--text-2); font-size:12px; }
+  .seg{ margin-left:auto; display:flex; background:rgba(0,0,0,.06); border-radius:8px; padding:2px; }
+  .seg button{ border:none; background:none; font:inherit; padding:4px 12px; border-radius:6px; cursor:pointer; color:var(--text-2); }
+  .seg button.active{ background:#fff; color:var(--text-1); font-weight:600; box-shadow:0 1px 3px rgba(0,0,0,.12), 0 0 0 .5px rgba(0,0,0,.04); }
+  .tbtn{ border:none; cursor:pointer; font:inherit; border-radius:7px; padding:5px 12px; }
+  .tbtn.primary{ background:var(--blue); color:#fff; font-weight:600; }
+  .tbtn.primary:hover{ background:var(--blue-press); }
+  .tbtn.ghost{ background:rgba(0,0,0,.05); color:var(--text-1); }
+
+  .view{ flex:1; display:none; min-height:0; }
+  .view.active{ display:flex; }
+
+  /* ============ 视图1: Chatbot ============ */
+  #view-chat{ flex-direction:column; }
+  .chat-scroll{ flex:1; overflow-y:auto; padding:20px 24px; }
+  .msg-row{ display:flex; gap:10px; margin-bottom:18px; max-width:760px; }
+  .msg-row.user{ margin-left:auto; flex-direction:row-reverse; }
+  .m-avatar{ width:28px; height:28px; border-radius:8px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:14px; }
+  .m-avatar.ai{ background:linear-gradient(135deg,#0A84FF,#64D2FF); color:#fff; }
+  .m-avatar.u{ background:linear-gradient(135deg,#30D158,#64D2FF); color:#fff; }
+  .bubble{
+    padding:10px 14px; border-radius:16px; line-height:1.55; font-size:13.5px; max-width:100%;
+  }
+  .msg-row:not(.user) .bubble{ background:rgba(0,0,0,.045); border-top-left-radius:4px; }
+  .msg-row.user .bubble{ background:var(--blue); color:#fff; border-top-right-radius:4px; }
+  .bubble b{ font-weight:600; }
+  .mem-card{
+    margin-top:8px; background:#fff; border:1px solid var(--hairline); border-radius:10px; padding:10px 12px;
+    box-shadow:0 1px 3px rgba(0,0,0,.05);
+  }
+  .mem-card .mc-head{ display:flex; align-items:center; gap:6px; font-weight:600; font-size:12px; margin-bottom:4px; }
+  .mem-card .tag{ font-size:10.5px; padding:1px 7px; border-radius:8px; background:rgba(191,90,242,.14); color:var(--purple); font-weight:600; }
+  .mem-card p{ font-size:12.5px; color:var(--text-2); line-height:1.5; }
+  .mem-card .mc-actions{ display:flex; gap:6px; margin-top:8px; }
+  .mc-actions button{ font-size:11.5px; border:1px solid var(--hairline); background:#fff; border-radius:6px; padding:3px 10px; cursor:pointer; color:var(--text-1); }
+  .mc-actions button.save{ background:var(--blue); color:#fff; border-color:transparent; font-weight:600; }
+  .chat-input-bar{
+    flex-shrink:0; padding:12px 20px 16px; border-top:1px solid var(--hairline); background:#fff;
+  }
+  .ctx-chips{ display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap; }
+  .chip{ font-size:11.5px; padding:3px 10px; border-radius:12px; background:rgba(10,132,255,.1); color:var(--blue); cursor:pointer; border:1px solid transparent; }
+  .chip:hover{ border-color:rgba(10,132,255,.35); }
+  .input-box{
+    display:flex; align-items:flex-end; gap:10px; border:1px solid var(--hairline); border-radius:14px; padding:10px 12px;
+    box-shadow:0 1px 4px rgba(0,0,0,.05); background:#fff;
+  }
+  .input-box:focus-within{ border-color:rgba(10,132,255,.5); box-shadow:0 0 0 3px rgba(10,132,255,.15); }
+  .input-box textarea{ flex:1; border:none; outline:none; resize:none; font:inherit; font-size:13.5px; line-height:1.4; max-height:100px; }
+  .send-btn{
+    width:30px; height:30px; border-radius:50%; border:none; background:var(--blue); color:#fff; cursor:pointer; font-size:14px; flex-shrink:0;
+  }
+  .quick-cmd{ display:flex; gap:6px; margin-top:8px; }
+  .quick-cmd button{ font-size:11.5px; padding:4px 12px; border-radius:12px; border:1px solid var(--hairline); background:rgba(0,0,0,.03); cursor:pointer; color:var(--text-2); }
+  .quick-cmd button:hover{ color:var(--blue); border-color:rgba(10,132,255,.4); }
+
+  /* ============ 视图2: 项目进展表 ============ */
+  #view-projects{ flex-direction:column; overflow:hidden; }
+  .stat-row{ display:flex; gap:12px; padding:16px 20px 4px; }
+  .stat{ flex:1; border:1px solid var(--hairline); border-radius:12px; padding:12px 14px; background:#fff; }
+  .stat .k{ font-size:11.5px; color:var(--text-2); }
+  .stat .v{ font-size:24px; font-weight:700; margin-top:2px; letter-spacing:-.5px; }
+  .stat .t{ font-size:11px; margin-top:2px; }
+  .t-up{ color:var(--green); } .t-warn{ color:var(--orange); }
+  .table-wrap{ flex:1; overflow:auto; padding:12px 20px 20px; }
+  table{ width:100%; border-collapse:separate; border-spacing:0; background:#fff; border:1px solid var(--hairline); border-radius:12px; overflow:hidden; }
+  th{ text-align:left; font-size:11.5px; color:var(--text-2); font-weight:600; padding:10px 14px; background:rgba(0,0,0,.025); border-bottom:1px solid var(--hairline); position:sticky; top:0; }
+  td{ padding:12px 14px; border-bottom:1px solid var(--hairline); font-size:12.5px; vertical-align:middle; }
+  tr:last-child td{ border-bottom:none; }
+  tbody tr{ cursor:pointer; }
+  tbody tr:hover{ background:rgba(10,132,255,.045); }
+  .p-name{ font-weight:600; display:flex; align-items:center; gap:8px; }
+  .pill{ font-size:11px; padding:2px 9px; border-radius:9px; font-weight:600; white-space:nowrap; }
+  .pill.run{ background:rgba(48,209,88,.15); color:#1f8a3d; }
+  .pill.risk{ background:rgba(255,159,10,.16); color:#b26a00; }
+  .pill.pause{ background:rgba(0,0,0,.07); color:var(--text-2); }
+  .pill.done{ background:rgba(10,132,255,.13); color:var(--blue); }
+  .bar{ width:110px; height:5px; border-radius:3px; background:rgba(0,0,0,.07); overflow:hidden; display:inline-block; vertical-align:middle; }
+  .bar i{ display:block; height:100%; border-radius:3px; }
+  .pct{ font-size:11.5px; color:var(--text-2); margin-left:8px; }
+  .memos-link{ color:var(--blue); font-weight:600; }
+
+  /* ============ 视图3: 记忆库 ============ */
+  #view-memory{ flex-direction:column; }
+  .mem-toolbar{ display:flex; align-items:center; gap:10px; padding:14px 20px 10px; }
+  .filter-tabs{ display:flex; gap:4px; background:rgba(0,0,0,.05); padding:2px; border-radius:8px; }
+  .filter-tabs button{ border:none; background:none; font:inherit; font-size:12px; padding:4px 12px; border-radius:6px; cursor:pointer; color:var(--text-2); }
+  .filter-tabs button.active{ background:#fff; font-weight:600; color:var(--text-1); box-shadow:0 1px 2px rgba(0,0,0,.1); }
+  .seg-inline{ display:flex; background:rgba(0,0,0,.06); border-radius:8px; padding:2px; }
+  .seg-inline button{ border:none; background:none; font:inherit; font-size:12px; padding:4px 12px; border-radius:6px; cursor:pointer; color:var(--text-2); }
+  .seg-inline button.active{ background:#fff; color:var(--text-1); font-weight:600; box-shadow:0 1px 3px rgba(0,0,0,.12), 0 0 0 .5px rgba(0,0,0,.04); }
+  .mem-scroll{ flex:1; overflow-y:auto; padding:6px 20px 20px; }
+  .mem-group-label{ font-size:12px; font-weight:700; color:var(--text-2); margin:14px 2px 10px; display:flex; align-items:center; gap:6px; }
+  .mem-group-label .g-cnt{ font-weight:500; color:var(--text-3); }
+  .mem-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px; align-content:start; }
+  .mcard{
+    background:#fff; border:1px solid var(--hairline); border-radius:12px; padding:14px; cursor:pointer;
+    transition:box-shadow .15s, transform .15s;
+  }
+  .mcard:hover{ box-shadow:0 4px 16px rgba(0,0,0,.1); transform:translateY(-1px); }
+  .mcard .top{ display:flex; align-items:center; gap:6px; margin-bottom:6px; }
+  .mcard .src{ margin-left:auto; font-size:11px; color:var(--text-3); }
+  .mcard h3{ font-size:13.5px; font-weight:600; line-height:1.4; margin-bottom:6px; }
+  .mcard p{ font-size:12px; color:var(--text-2); line-height:1.55; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+  .mcard .foot{ display:flex; align-items:center; gap:6px; margin-top:10px; }
+  .ptag{ font-size:10.5px; padding:1px 8px; border-radius:8px; font-weight:600; }
+  .mcard .date{ margin-left:auto; font-size:11px; color:var(--text-3); }
+
+  /* ============ 视图4: 知识库预览 ============ */
+  #view-kb{ flex-direction:row; }
+  .kb-tree{
+    width:250px; flex-shrink:0; border-right:1px solid var(--hairline); overflow-y:auto; padding:12px 8px;
+    background:rgba(0,0,0,.018);
+  }
+  .kb-node{ padding:5px 10px; border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:7px; font-size:12.5px; }
+  .kb-node:hover{ background:rgba(0,0,0,.04); }
+  .kb-node.sel{ background:rgba(10,132,255,.14); font-weight:600; }
+  .kb-node.child{ padding-left:32px; }
+  .kb-node .cnt{ margin-left:auto; font-size:11px; color:var(--text-3); }
+  .kb-doc{ flex:1; overflow-y:auto; padding:28px 36px; min-width:0; }
+  .kb-doc .crumb{ font-size:12px; color:var(--text-2); margin-bottom:14px; }
+  .kb-doc h1{ font-size:24px; font-weight:700; letter-spacing:-.4px; margin-bottom:6px; }
+  .kb-doc .meta{ font-size:12px; color:var(--text-3); margin-bottom:20px; display:flex; gap:14px; }
+  .kb-doc h2{ font-size:16px; font-weight:700; margin:22px 0 8px; }
+  .kb-doc p, .kb-doc li{ font-size:13.5px; line-height:1.7; color:#3a3a3c; }
+  .kb-doc ul{ padding-left:20px; }
+  .callout{
+    border-left:3px solid var(--blue); background:rgba(10,132,255,.07); border-radius:0 8px 8px 0;
+    padding:10px 14px; margin:14px 0; font-size:12.5px; line-height:1.6;
+  }
+  .backlink{ margin-top:26px; border-top:1px solid var(--hairline); padding-top:14px; }
+  .backlink .bl{ display:inline-flex; align-items:center; gap:6px; font-size:12px; background:rgba(0,0,0,.04); border-radius:8px; padding:5px 10px; margin:0 6px 6px 0; color:var(--text-1); }
+
+  /* 滚动条 */
+  ::-webkit-scrollbar{ width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb{ background:rgba(0,0,0,.18); border-radius:4px; border:2px solid transparent; background-clip:content-box; }
+  ::-webkit-scrollbar-thumb:hover{ background:rgba(0,0,0,.3); background-clip:content-box; }
+</style>
+</head>
+<body>
+
+<div class="window">
+  <!-- ================= 侧边栏 ================= -->
+  <aside class="sidebar">
+    <div class="traffic"><i class="c"></i><i class="m"></i><i class="z"></i></div>
+    <div class="search-wrap">
+      <div class="search">
+        <span>🔍</span><input placeholder="搜索记忆 / 知识 / 项目">
+      </div>
+    </div>
+
+    <div class="side-label">工作台</div>
+    <nav class="nav" id="mainNav">
+      <button class="active" data-view="chat"><span class="ico">💬</span>对话助手 <span class="badge">3</span></button>
+      <button data-view="projects"><span class="ico">📊</span>项目进展表</button>
+      <button data-view="memory"><span class="ico">🧠</span>记忆库 <span class="badge">128</span></button>
+      <button data-view="kb"><span class="ico">📚</span>知识库</button>
+    </nav>
+
+    <div class="side-label">进行中的项目</div>
+    <div style="padding:0 8px; overflow-y:auto;" id="sideProjects">
+      <div class="proj active"><span class="dot" style="background:var(--blue)"></span><span class="name">AI笔记 App 2.0</span><span class="mini">68%</span></div>
+      <div class="proj"><span class="dot" style="background:var(--purple)"></span><span class="name">官网改版</span><span class="mini">42%</span></div>
+      <div class="proj"><span class="dot" style="background:var(--orange)"></span><span class="name">用户增长实验</span><span class="mini">35%</span></div>
+      <div class="proj"><span class="dot" style="background:var(--green)"></span><span class="name">团队知识沉淀</span><span class="mini">81%</span></div>
+    </div>
+
+    <div class="side-foot">
+      <div class="avatar">默</div>
+      <div><b style="font-size:12.5px;">MemoPilot</b><small>已同步 · 今日新增 6 条记忆</small></div>
+    </div>
+  </aside>
+
+  <!-- ================= 主区域 ================= -->
+  <main class="main">
+    <div class="titlebar">
+      <h1 id="tbTitle">对话助手</h1>
+      <span class="sub" id="tbSub">当前上下文：AI笔记 App 2.0</span>
+    </div>
+
+    <!-- ========== 视图1：Chatbot 主界面 ========== -->
+    <section class="view active" id="view-chat">
+      <div class="chat-scroll" id="chatScroll">
+        <div class="msg-row user">
+          <div class="m-avatar u">我</div>
+          <div class="bubble">刚和设计对完，2.0 版本的编辑器决定改用块编辑方案，放弃原来的富文本编辑器。帮我记下来，顺便看看对排期有没有影响。</div>
+        </div>
+        <div class="msg-row">
+          <div class="m-avatar ai">✦</div>
+          <div class="bubble">
+            已理解。这是一个<b>关键决策</b>，我为你整理成一条记忆：
+            <div class="mem-card">
+              <div class="mc-head">🧠 决策记忆 <span class="tag">决策</span><span class="tag" style="background:rgba(10,132,255,.12);color:var(--blue)">AI笔记 App 2.0</span></div>
+              <p><b>编辑器方案变更：</b>2.0 版本编辑器由富文本方案改为块编辑（Block-based）。原因：富文本在移动端排版一致性差，块编辑更利于后续 AI 结构化处理。影响范围：编辑器模块、数据存储格式、旧笔记迁移。</p>
+              <div class="mc-actions">
+                <button class="save">✓ 存入记忆库</button><button>关联知识库</button><button>修改</button>
+              </div>
+            </div>
+            <div style="margin-top:10px;">关于排期影响：根据项目进展表，编辑器模块原计划 <b>9 月 20 日</b>完成。块编辑方案需要重写存储层，参考「团队知识沉淀」项目里的<b>《块编辑技术选型》</b>文档，预估延期 <b>5-7 天</b>。建议：将数据迁移任务拆为独立里程碑。要我把这个风险同步到项目进展表吗？</div>
+          </div>
+        </div>
+        <div class="msg-row user">
+          <div class="m-avatar u">我</div>
+          <div class="bubble">同步吧，风险等级标成中。</div>
+        </div>
+        <div class="msg-row">
+          <div class="m-avatar ai">✦</div>
+          <div class="bubble">✅ 已更新「AI笔记 App 2.0」进展表：新增风险项「编辑器方案变更 → 存储层重写」，等级<b style="color:var(--orange)">中</b>，里程碑「编辑器联调」已顺延至 9 月 27 日。项目整体进度维持 68%。</div>
+        </div>
+      </div>
+
+      <div class="chat-input-bar">
+        <div class="ctx-chips">
+          <span class="chip">📎 当前项目：AI笔记 App 2.0</span>
+          <span class="chip">🧠 引用 3 条相关记忆</span>
+          <span class="chip">📚 引用《块编辑技术选型》</span>
+        </div>
+        <div class="input-box">
+          <textarea id="chatInput" rows="1" placeholder="输入消息，或直接说出要记下的内容…（⌘↩ 发送）"></textarea>
+          <button class="send-btn" id="sendBtn">↑</button>
+        </div>
+        <div class="quick-cmd">
+          <button>/记一下</button><button>/本周进展</button><button>/整理到知识库</button><button>/项目风险</button><button>/回忆：上次会议</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 视图2：项目进展表 ========== -->
+    <section class="view" id="view-projects">
+      <div class="stat-row">
+        <div class="stat"><div class="k">进行中项目</div><div class="v">4</div><div class="t t-up">↑ 本周新增 1 个</div></div>
+        <div class="stat"><div class="k">本周新增记忆</div><div class="v">23</div><div class="t t-up">↑ 较上周 +35%</div></div>
+        <div class="stat"><div class="k">待处理风险</div><div class="v">3</div><div class="t t-warn">⚠ 1 项等级为高</div></div>
+        <div class="stat"><div class="k">知识库文档</div><div class="v">47</div><div class="t t-up">↑ 本周整理 5 篇</div></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>项目</th><th>状态</th><th>进度</th><th>下一里程碑</th><th>截止</th><th>关联记忆</th><th>最近动态</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="p-name"><span class="dot" style="width:8px;height:8px;border-radius:50%;background:var(--blue);display:inline-block"></span>AI笔记 App 2.0</span></td>
+              <td><span class="pill run">进行中</span></td>
+              <td><span class="bar"><i style="width:68%;background:var(--blue)"></i></span><span class="pct">68%</span></td>
+              <td>编辑器联调</td><td>9月27日</td>
+              <td><span class="memos-link">34 条</span></td>
+              <td style="color:var(--text-2)">10 分钟前 · 新增决策记忆</td>
+            </tr>
+            <tr>
+              <td><span class="p-name"><span class="dot" style="width:8px;height:8px;border-radius:50%;background:var(--purple);display:inline-block"></span>官网改版</span></td>
+              <td><span class="pill risk">有风险</span></td>
+              <td><span class="bar"><i style="width:42%;background:var(--orange)"></i></span><span class="pct">42%</span></td>
+              <td>视觉稿终评</td><td>9月12日</td>
+              <td><span class="memos-link">18 条</span></td>
+              <td style="color:var(--text-2)">昨天 · 风险升级：素材延期</td>
+            </tr>
+            <tr>
+              <td><span class="p-name"><span class="dot" style="width:8px;height:8px;border-radius:50%;background:var(--orange);display:inline-block"></span>用户增长实验</span></td>
+              <td><span class="pill run">进行中</span></td>
+              <td><span class="bar"><i style="width:35%;background:var(--orange)"></i></span><span class="pct">35%</span></td>
+              <td>A/B 实验 Readout</td><td>9月18日</td>
+              <td><span class="memos-link">27 条</span></td>
+              <td style="color:var(--text-2)">2 小时前 · 录入实验数据</td>
+            </tr>
+            <tr>
+              <td><span class="p-name"><span class="dot" style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block"></span>团队知识沉淀</span></td>
+              <td><span class="pill run">进行中</span></td>
+              <td><span class="bar"><i style="width:81%;background:var(--green)"></i></span><span class="pct">81%</span></td>
+              <td>Q3 知识盘点</td><td>9月30日</td>
+              <td><span class="memos-link">49 条</span></td>
+              <td style="color:var(--text-2)">今天 · 自动整理 5 篇文档</td>
+            </tr>
+            <tr>
+              <td><span class="p-name"><span class="dot" style="width:8px;height:8px;border-radius:50%;background:var(--text-3);display:inline-block"></span>旧版数据迁移</span></td>
+              <td><span class="pill done">已完成</span></td>
+              <td><span class="bar"><i style="width:100%;background:var(--text-3)"></i></span><span class="pct">100%</span></td>
+              <td>—</td><td>—</td>
+              <td><span class="memos-link">12 条</span></td>
+              <td style="color:var(--text-2)">8月30日 · 项目归档</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========== 视图3：记忆库 ========== -->
+    <section class="view" id="view-memory">
+      <div class="mem-toolbar">
+        <div class="filter-tabs" id="memTabs">
+          <button class="active" data-type="all">全部</button><button data-type="决策">决策</button><button data-type="会议">会议</button><button data-type="灵感">灵感</button><button data-type="待办">待办</button><button data-type="数据">数据</button>
+        </div>
+        <div class="seg seg-inline" id="memGroupSeg">
+          <button class="active" data-group="time">按时间</button><button data-group="project">按项目</button>
+        </div>
+        <span style="color:var(--text-3);font-size:12px;margin-left:auto;" id="memCount"></span>
+      </div>
+      <div class="mem-scroll" id="memScroll"></div>
+    </section>
+
+    <!-- ========== 视图4：知识库预览 ========== -->
+    <section class="view" id="view-kb">
+      <div class="kb-tree">
+        <div style="padding:2px 8px 10px;">
+          <div class="seg seg-inline" id="kbGroupSeg" style="display:flex;width:100%;">
+            <button class="active" data-group="project" style="flex:1;">按项目</button><button data-group="time" style="flex:1;">按时间</button>
+          </div>
+        </div>
+        <div id="kbTreeBody"></div>
+      </div>
+      <div class="kb-doc">
+        <div class="crumb">知识库 / AI笔记 App 2.0 / 产品文档</div>
+        <h1>块编辑技术选型</h1>
+        <div class="meta"><span>✦ 由 6 条记忆自动整理生成</span><span>更新于 9月7日</span><span>版本 v2.1</span></div>
+        <div class="callout">💡 <b>本文摘要：</b>对比了富文本与块编辑两种方案，最终决定 2.0 版本采用块编辑架构，存储层随之改为 JSON Block Tree，旧笔记通过一次性迁移脚本转换。</div>
+        <h2>背景</h2>
+        <p>1.x 的富文本编辑器在移动端存在排版漂移问题，且非结构化的 HTML 内容难以被 AI 功能（摘要、问答、记忆提取）可靠处理。2.0 需要编辑器同时服务好「人写」和「AI 读」。</p>
+        <h2>方案对比</h2>
+        <ul>
+          <li><b>继续富文本（ProseMirror 调优）</b>：成本低，但结构问题无法根治，AI 解析仍需额外清洗层。</li>
+          <li><b>块编辑（Block-based，自研 + 参考 Notion 模型）</b>：内容天然结构化，AI 可按块引用与改写；代价是存储层重写与旧数据迁移。</li>
+        </ul>
+        <h2>决策与依据</h2>
+        <p>选择块编辑。依据来自 9 月 7 日设计评审共识，以及增长实验中「AI 摘要」功能 62% 的高频使用率——结构化内容能直接放大这一核心功能的质量。</p>
+        <h2>风险与跟进</h2>
+        <ul>
+          <li>存储层重写预计延期 5-7 天，已同步至项目进展表（风险等级：中）。</li>
+          <li>旧笔记迁移脚本需在 9 月 20 日前完成灰度验证。</li>
+        </ul>
+        <div class="backlink">
+          <div style="font-size:12px;color:var(--text-2);margin-bottom:8px;">🔗 来源记忆（6）</div>
+          <span class="bl">🧠 编辑器改用块编辑方案</span>
+          <span class="bl">🧠 AI 摘要使用率 62%</span>
+          <span class="bl">🧠 移动端排版漂移问题清单</span>
+          <span class="bl">🧠 存储层重写排期评估</span>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+  const titles = {
+    chat:     ['对话助手',  '当前上下文：AI笔记 App 2.0'],
+    projects: ['项目进展表','4 个进行中 · 3 项风险待处理'],
+    memory:   ['记忆库',    '128 条记忆 · 今日新增 6 条'],
+    kb:       ['知识库',    '47 篇文档 · 由记忆自动整理']
+  };
+  function switchView(v){
+    document.querySelectorAll('.view').forEach(el=>el.classList.toggle('active', el.id==='view-'+v));
+    document.querySelectorAll('#mainNav button').forEach(b=>b.classList.toggle('active', b.dataset.view===v));
+    document.getElementById('tbTitle').textContent = titles[v][0];
+    document.getElementById('tbSub').textContent = titles[v][1];
+  }
+  document.querySelectorAll('#mainNav button').forEach(b=>{
+    b.addEventListener('click', ()=>switchView(b.dataset.view));
+  });
+
+  // 侧边栏项目点击 → 更新上下文
+  document.querySelectorAll('#sideProjects .proj').forEach(p=>{
+    p.addEventListener('click', ()=>{
+      document.querySelectorAll('#sideProjects .proj').forEach(x=>x.classList.remove('active'));
+      p.classList.add('active');
+      const name = p.querySelector('.name').textContent;
+      titles.chat[1] = '当前上下文：' + name;
+      if(document.getElementById('view-chat').classList.contains('active'))
+        document.getElementById('tbSub').textContent = titles.chat[1];
+    });
+  });
+
+  // 发送消息（演示）
+  const input = document.getElementById('chatInput');
+  const scroll = document.getElementById('chatScroll');
+  function send(){
+    const t = input.value.trim(); if(!t) return;
+    scroll.insertAdjacentHTML('beforeend',
+      `<div class="msg-row user"><div class="m-avatar u">我</div><div class="bubble"></div></div>`);
+    scroll.lastElementChild.querySelector('.bubble').textContent = t;
+    input.value=''; scroll.scrollTop = scroll.scrollHeight;
+    setTimeout(()=>{
+      scroll.insertAdjacentHTML('beforeend',
+        `<div class="msg-row"><div class="m-avatar ai">✦</div><div class="bubble">收到。我已将这条内容暂存为草稿记忆，你可以说「记一下」让我正式归档到当前项目，或补充更多上下文。</div></div>`);
+      scroll.scrollTop = scroll.scrollHeight;
+    }, 500);
+  }
+  document.getElementById('sendBtn').addEventListener('click', send);
+  input.addEventListener('keydown', e=>{
+    if((e.metaKey||e.ctrlKey) && e.key==='Enter') send();
+  });
+
+  /* ================= 记忆库：数据驱动渲染 ================= */
+  const TYPE_STYLE = {
+    '决策':['rgba(191,90,242,.14)','var(--purple)'],
+    '数据':['rgba(255,159,10,.16)','#b26a00'],
+    '会议':['rgba(48,209,88,.15)','#1f8a3d'],
+    '灵感':['rgba(10,132,255,.13)','var(--blue)'],
+    '待办':['rgba(255,69,58,.14)','var(--red)'],
+  };
+  const PROJ_STYLE = {
+    'AI笔记 2.0':['rgba(10,132,255,.12)','var(--blue)','var(--blue)'],
+    '增长实验':  ['rgba(255,159,10,.14)','#b26a00','var(--orange)'],
+    '官网改版':  ['rgba(191,90,242,.12)','var(--purple)','var(--purple)'],
+    '知识沉淀':  ['rgba(48,209,88,.13)','#1f8a3d','var(--green)'],
+    '未关联':    ['rgba(0,0,0,.06)','var(--text-2)','var(--text-3)'],
+  };
+  const MEMORIES = [
+    { type:'决策', src:'来自对话 · 10分钟前', title:'编辑器改用块编辑方案', body:'2.0 版本编辑器由富文本改为块编辑。原因：移动端排版一致性差；块结构利于 AI 处理。影响：编辑器模块、存储格式、旧笔记迁移。', proj:'AI笔记 2.0', date:'9月7日', day:'今天 · 9月7日' },
+    { type:'数据', src:'来自对话 · 2小时前', title:'新手引导 A/B 实验第 3 天数据', body:'B 组（渐进式引导）次日留存 41.2%，对照组 36.8%，提升 4.4pp；样本量 2,140，尚未达显著性，预计 9 月 12 日可出结论。', proj:'增长实验', date:'9月7日', day:'今天 · 9月7日' },
+    { type:'会议', src:'语音速记 · 昨天', title:'官网改版视觉评审纪要', body:'首页 Hero 采用产品实景截图而非插画；品牌色保持靛蓝；动效预算控制在 300ms 内。遗留：3 张案例素材客户未回传，存在延期风险。', proj:'官网改版', date:'9月6日', day:'昨天 · 9月6日' },
+    { type:'灵感', src:'快捷录入 · 昨天', title:'记忆自动串联的产品想法', body:'当同一项目的记忆累积到一定密度，自动生成「项目时间线」视图，把决策点、里程碑、数据变化串成可回放的故事线，用于复盘和汇报。', proj:'未关联', date:'9月6日', day:'昨天 · 9月6日' },
+    { type:'待办', src:'来自对话 · 9月5日', title:'催客户回传案例素材', body:'官网改版缺 3 张客户案例截图，9 月 10 日前必须拿到，否则视觉稿终评延期。负责人：Melissa。', proj:'官网改版', date:'9月5日', day:'9月5日' },
+    { type:'决策', src:'来自对话 · 9月4日', title:'记忆库采用「项目 + 标签」双维度归档', body:'放弃纯文件夹树。每条记忆必须挂项目（可多个）+ 类型标签，知识库文档由记忆沉淀生成，保持单向流动：对话 → 记忆 → 知识。', proj:'知识沉淀', date:'9月4日', day:'9月4日' },
+  ];
+  let memFilter = 'all', memGroup = 'time';
+
+  function memCardHTML(m){
+    const ts = TYPE_STYLE[m.type], ps = PROJ_STYLE[m.proj];
+    return `<div class="mcard">
+      <div class="top"><span class="ptag" style="background:${ts[0]};color:${ts[1]}">${m.type}</span><span class="src">${m.src}</span></div>
+      <h3>${m.title}</h3><p>${m.body}</p>
+      <div class="foot"><span class="ptag" style="background:${ps[0]};color:${ps[1]}">${m.proj}</span><span class="date">${m.date}</span></div>
+    </div>`;
+  }
+  function renderMemories(){
+    const list = MEMORIES.filter(m=> memFilter==='all' || m.type===memFilter);
+    const box = document.getElementById('memScroll');
+    const groups = {};
+    const key = m => memGroup==='time' ? m.day : m.proj;
+    list.forEach(m=>{ (groups[key(m)] ||= []).push(m); });
+    box.innerHTML = Object.entries(groups).map(([g, items])=>{
+      const dot = memGroup==='project' ? `<span style="width:8px;height:8px;border-radius:50%;background:${PROJ_STYLE[g][2]};display:inline-block"></span>` : '🕐';
+      return `<div class="mem-group-label">${dot} ${g}<span class="g-cnt">${items.length} 条</span></div>
+              <div class="mem-grid">${items.map(memCardHTML).join('')}</div>`;
+    }).join('');
+    document.getElementById('memCount').textContent =
+      `共 ${list.length} 条 · ${memGroup==='time' ? '按时间倒序' : '按项目分组'}`;
+  }
+  document.querySelectorAll('#memTabs button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      document.querySelectorAll('#memTabs button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active'); memFilter = b.dataset.type; renderMemories();
+    });
+  });
+  document.querySelectorAll('#memGroupSeg button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      document.querySelectorAll('#memGroupSeg button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active'); memGroup = b.dataset.group; renderMemories();
+    });
+  });
+  renderMemories();
+
+  /* ================= 知识库：树渲染（按项目 / 按时间） ================= */
+  const KB_BY_PROJECT = [
+    { label:'AI笔记 App 2.0', nodes:[
+      { name:'📁 产品文档', cnt:'8' }, { name:'📄 块编辑技术选型', child:1, sel:1 },
+      { name:'📄 2.0 信息架构', child:1 }, { name:'📄 数据迁移方案 v3', child:1 },
+      { name:'📁 会议纪要', cnt:'12' }, { name:'📁 决策记录', cnt:'9' } ]},
+    { label:'用户增长实验', nodes:[ { name:'📁 实验报告', cnt:'6' }, { name:'📁 增长笔记', cnt:'11' } ]},
+    { label:'团队知识沉淀', nodes:[ { name:'📁 方法论', cnt:'7' } ]},
+  ];
+  const KB_BY_TIME = [
+    { label:'今天 · 9月7日', nodes:[ { name:'📄 块编辑技术选型', sel:1, meta:'AI笔记 2.0' }, { name:'📄 A/B 实验第 3 天数据快报', meta:'增长实验' } ]},
+    { label:'昨天 · 9月6日', nodes:[ { name:'📄 官网视觉评审纪要', meta:'官网改版' }, { name:'📄 记忆串联功能构想', meta:'未关联' } ]},
+    { label:'9月4日', nodes:[ { name:'📄 记忆归档双维度设计', meta:'知识沉淀' } ]},
+    { label:'9月1日', nodes:[ { name:'📄 2.0 信息架构', meta:'AI笔记 2.0' }, { name:'📄 数据迁移方案 v3', meta:'AI笔记 2.0' } ]},
+  ];
+  function renderKbTree(mode){
+    const data = mode==='project' ? KB_BY_PROJECT : KB_BY_TIME;
+    document.getElementById('kbTreeBody').innerHTML = data.map(g=>
+      `<div class="side-label" style="padding:10px 10px 6px;">${g.label}</div>` +
+      g.nodes.map(n=>
+        `<div class="kb-node${n.child?' child':''}${n.sel?' sel':''}">${n.name}${n.cnt?`<span class="cnt">${n.cnt}</span>`:''}${n.meta?`<span class="cnt">${n.meta}</span>`:''}</div>`
+      ).join('')
+    ).join('');
+    document.querySelectorAll('#kbTreeBody .kb-node').forEach(n=>{
+      n.addEventListener('click', ()=>{
+        document.querySelectorAll('#kbTreeBody .kb-node').forEach(x=>x.classList.remove('sel'));
+        n.classList.add('sel');
+      });
+    });
+  }
+  document.querySelectorAll('#kbGroupSeg button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      document.querySelectorAll('#kbGroupSeg button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active'); renderKbTree(b.dataset.group);
+    });
+  });
+  renderKbTree('project');
+</script>
+</body>
+</html>

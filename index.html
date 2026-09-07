@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MemoPilot · 多项目管理助手 — 可交互原型（任务3 Demo）</title>
+<style>
+  /* ============ 基础与桌面背景 ============ */
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-font-smoothing:antialiased; }
+  :root{
+    --blue:#0A84FF; --blue-press:#0066D6;
+    --green:#30D158; --yellow:#FFD60A; --orange:#FF9F0A; --red:#FF453A; --purple:#BF5AF2; --teal:#64D2FF;
+    --text-1:#1d1d1f; --text-2:#6e6e73; --text-3:#aeaeb2;
+    --hairline:rgba(0,0,0,.08);
+    --sidebar-bg:rgba(246,246,248,.82);
+    --content-bg:#ffffff;
+    --radius:12px;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  }
+  html,body{ height:100%; }
+  body{
+    font-family:var(--font); color:var(--text-1); font-size:13px;
+    display:flex; align-items:center; justify-content:center;
+    background:
+      radial-gradient(1200px 800px at 15% 10%, #7db8ff 0%, transparent 55%),
+      radial-gradient(1000px 700px at 85% 20%, #c9a6ff 0%, transparent 55%),
+      radial-gradient(1100px 900px at 50% 95%, #ffb98a 0%, transparent 55%),
+      linear-gradient(160deg,#5e8ce6,#8f7ae0 55%,#d98cb3);
+    overflow:hidden;
+  }
+  /* ============ macOS 窗口 ============ */
+  .window{
+    width:min(1280px, 96vw); height:min(840px, 94vh);
+    background:var(--content-bg); border-radius:var(--radius);
+    box-shadow: 0 0 0 .5px rgba(0,0,0,.25), 0 22px 70px rgba(0,0,0,.45), 0 4px 18px rgba(0,0,0,.25);
+    display:flex; overflow:hidden; position:relative;
+  }
+  /* ============ 侧边栏 ============ */
+  .sidebar{
+    width:236px; flex-shrink:0; display:flex; flex-direction:column;
+    background:var(--sidebar-bg);
+    backdrop-filter:blur(28px) saturate(1.8); -webkit-backdrop-filter:blur(28px) saturate(1.8);
+    border-right:1px solid var(--hairline);
+  }
+  .traffic{ display:flex; gap:8px; padding:14px 14px 10px; }
+  .traffic i{ width:12px; height:12px; border-radius:50%; display:block; box-shadow:inset 0 0 1px rgba(0,0,0,.2); }
+  .traffic .c{ background:#FF5F57; } .traffic .m{ background:#FEBC2E; } .traffic .z{ background:#28C840; }
+  .search-wrap{ padding:2px 12px 12px; }
+  .search{
+    display:flex; align-items:center; gap:6px; height:28px; padding:0 8px;
+    background:rgba(0,0,0,.055); border-radius:8px; color:var(--text-2);
+  }
+  .search input{ border:none; outline:none; background:none; width:100%; font:inherit; color:var(--text-1); }
+  .side-label{ padding:14px 16px 4px; font-size:11px; font-weight:600; color:var(--text-3); }
+  .nav{ padding:0 8px; display:flex; flex-direction:column; gap:1px; }
+  .nav button{
+    display:flex; align-items:center; gap:8px; width:100%; padding:5px 8px; border:none; cursor:pointer;
+    background:none; border-radius:6px; font:inherit; color:var(--text-1); text-align:left;
+  }
+  .nav button:hover{ background:rgba(0,0,0,.045); }
+  .nav button.active{ background:rgba(0,0,0,.08); font-weight:600; }
+  .nav .badge{ margin-left:auto; font-size:11px; color:var(--text-2); background:rgba(0,0,0,.06); padding:1px 7px; border-radius:10px; }
+  .nav .ico{ width:16px; text-align:center; }
+  .proj{ display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:6px; cursor:pointer; }
+  .proj:hover{ background:rgba(0,0,0,.045); }
+  .proj.active{ background:rgba(10,132,255,.14); }
+  .proj .dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .proj .name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .proj .mini{ margin-left:auto; font-size:11px; color:var(--text-3); }
+  .side-foot{ margin-top:auto; padding:10px 12px; border-top:1px solid var(--hairline); display:flex; align-items:center; gap:8px; }
+  .avatar{ width:26px; height:26px; border-radius:50%; background:linear-gradient(135deg,#64D2FF,#BF5AF2); display:flex; align-items:center; justify-content:center; color:#fff; font-size:12px; font-weight:600; }
+  .side-foot small{ color:var(--text-2); display:block; font-size:11px; }
+
+  /* ============ 主内容 ============ */
+  .main{ flex:1; display:flex; flex-direction:column; min-width:0; }
+  .titlebar{
+    height:52px; flex-shrink:0; display:flex; align-items:center; gap:12px; padding:0 16px;
+    border-bottom:1px solid var(--hairline); background:rgba(255,255,255,.7);
+    backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+  }
+  .titlebar h1{ font-size:15px; font-weight:700; }
+  .titlebar .sub{ color:var(--text-2); font-size:12px; }
+
+  .view{ flex:1; display:none; min-height:0; }
+  .view.active{ display:flex; }
+
+  /* ============ 视图1: Chatbot ============ */
+  #view-chat{ flex-direction:column; }
+
+  /* 会话时间线（跨会话演示核心） */
+  .session-tabs{
+    flex-shrink:0; display:flex; align-items:center; gap:8px; padding:10px 20px;
+    border-bottom:1px solid var(--hairline); background:rgba(0,0,0,.015); overflow-x:auto;
+  }
+  .session-tabs .st-label{ font-size:11px; color:var(--text-3); font-weight:600; flex-shrink:0; }
+  .stab{
+    display:flex; flex-direction:column; align-items:flex-start; gap:1px;
+    border:1px solid var(--hairline); background:#fff; border-radius:10px;
+    padding:6px 12px; cursor:pointer; font:inherit; flex-shrink:0; transition:all .15s;
+  }
+  .stab .d{ font-size:12px; font-weight:600; }
+  .stab .s{ font-size:10.5px; color:var(--text-3); }
+  .stab:hover{ border-color:rgba(10,132,255,.4); }
+  .stab.active{ border-color:var(--blue); background:rgba(10,132,255,.07); box-shadow:0 0 0 3px rgba(10,132,255,.12); }
+  .stab.active .s{ color:var(--blue); }
+  .stab .stage{ font-size:10px; padding:0 6px; border-radius:6px; background:rgba(191,90,242,.12); color:var(--purple); font-weight:600; margin-top:2px; }
+
+  /* 跨会话记忆加载横幅 */
+  .session-banner{
+    display:flex; align-items:flex-start; gap:10px; margin:0 0 16px;
+    background:linear-gradient(90deg, rgba(10,132,255,.09), rgba(191,90,242,.07));
+    border:1px solid rgba(10,132,255,.22); border-radius:12px; padding:10px 14px;
+  }
+  .session-banner .bi{ font-size:16px; }
+  .session-banner .bt{ font-size:12.5px; line-height:1.55; }
+  .session-banner .bt b{ font-weight:600; }
+  .session-banner .bm{ display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; }
+
+  .chat-scroll{ flex:1; overflow-y:auto; padding:20px 24px; }
+  .msg-row{ display:flex; gap:10px; margin-bottom:18px; max-width:780px; }
+  .msg-row.user{ margin-left:auto; flex-direction:row-reverse; }
+  .m-avatar{ width:28px; height:28px; border-radius:8px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:14px; }
+  .m-avatar.ai{ background:linear-gradient(135deg,#0A84FF,#64D2FF); color:#fff; }
+  .m-avatar.u{ background:linear-gradient(135deg,#30D158,#64D2FF); color:#fff; }
+  .bubble{ padding:10px 14px; border-radius:16px; line-height:1.55; font-size:13.5px; max-width:100%; }
+  .msg-row:not(.user) .bubble{ background:rgba(0,0,0,.045); border-top-left-radius:4px; }
+  .msg-row.user .bubble{ background:var(--blue); color:#fff; border-top-right-radius:4px; }
+  .bubble b{ font-weight:600; }
+
+  /* 记忆引用标记（出处可点击） */
+  .cite{
+    display:inline-flex; align-items:center; gap:4px; font-size:11.5px; font-weight:600;
+    background:rgba(191,90,242,.12); color:var(--purple); border-radius:8px; padding:1px 8px;
+    cursor:pointer; border:1px solid transparent; vertical-align:1px; margin:0 2px;
+  }
+  .cite:hover{ border-color:rgba(191,90,242,.45); background:rgba(191,90,242,.18); }
+  .cite.doc{ background:rgba(10,132,255,.1); color:var(--blue); }
+  .cite.doc:hover{ border-color:rgba(10,132,255,.4); }
+  .cite.cross{ background:rgba(255,159,10,.13); color:#b26a00; }
+  .cite.cross:hover{ border-color:rgba(255,159,10,.45); }
+
+  /* 记忆卡片（候选/已入库） */
+  .mem-card{
+    margin-top:8px; background:#fff; border:1px solid var(--hairline); border-radius:10px; padding:10px 12px;
+    box-shadow:0 1px 3px rgba(0,0,0,.05);
+  }
+  .mem-card .mc-head{ display:flex; align-items:center; gap:6px; font-weight:600; font-size:12px; margin-bottom:4px; flex-wrap:wrap; }
+  .mem-card .tag{ font-size:10.5px; padding:1px 7px; border-radius:8px; background:rgba(191,90,242,.14); color:var(--purple); font-weight:600; }
+  .mem-card p{ font-size:12.5px; color:var(--text-2); line-height:1.5; }
+  .mem-card .mc-actions{ display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+  .mc-actions button{ font-size:11.5px; border:1px solid var(--hairline); background:#fff; border-radius:6px; padding:3px 10px; cursor:pointer; color:var(--text-1); }
+  .mc-actions button:hover{ border-color:rgba(10,132,255,.4); }
+  .mc-actions button.save{ background:var(--blue); color:#fff; border-color:transparent; font-weight:600; }
+  .mc-actions button:disabled{ opacity:.45; cursor:default; }
+  .mem-card.saved{ border-color:rgba(48,209,88,.45); background:rgba(48,209,88,.05); }
+  .mem-card.conflict{ border-color:rgba(255,159,10,.5); background:rgba(255,159,10,.05); }
+  .conf-meta{ font-size:11px; color:var(--text-3); margin-top:6px; }
+
+  /* 建议操作 chips */
+  .suggest-bar{
+    flex-shrink:0; padding:8px 20px 0; display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+  }
+  .suggest-bar .sb-label{ font-size:11px; color:var(--text-3); font-weight:600; }
+  .sg{
+    font-size:12px; padding:5px 12px; border-radius:14px; cursor:pointer;
+    border:1px dashed rgba(10,132,255,.5); color:var(--blue); background:rgba(10,132,255,.05); font-family:var(--font);
+  }
+  .sg:hover{ background:rgba(10,132,255,.12); }
+  .sg.done{ border-style:solid; border-color:rgba(48,209,88,.5); color:#1f8a3d; background:rgba(48,209,88,.07); cursor:default; }
+
+  .chat-input-bar{ flex-shrink:0; padding:10px 20px 14px; border-top:1px solid var(--hairline); background:#fff; }
+  .ctx-chips{ display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap; }
+  .chip{ font-size:11.5px; padding:3px 10px; border-radius:12px; background:rgba(10,132,255,.1); color:var(--blue); cursor:pointer; border:1px solid transparent; }
+  .chip:hover{ border-color:rgba(10,132,255,.35); }
+  .input-box{
+    display:flex; align-items:flex-end; gap:10px; border:1px solid var(--hairline); border-radius:14px; padding:10px 12px;
+    box-shadow:0 1px 4px rgba(0,0,0,.05); background:#fff;
+  }
+  .input-box:focus-within{ border-color:rgba(10,132,255,.5); box-shadow:0 0 0 3px rgba(10,132,255,.15); }
+  .input-box textarea{ flex:1; border:none; outline:none; resize:none; font:inherit; font-size:13.5px; line-height:1.4; max-height:100px; }
+  .send-btn{ width:30px; height:30px; border-radius:50%; border:none; background:var(--blue); color:#fff; cursor:pointer; font-size:14px; flex-shrink:0; }
+
+  /* ============ 视图2: 项目进展表 ============ */
+  #view-projects{ flex-direction:column; overflow:hidden; }
+  .stat-row{ display:flex; gap:12px; padding:16px 20px 4px; }
+  .stat{ flex:1; border:1px solid var(--hairline); border-radius:12px; padding:12px 14px; background:#fff; }
+  .stat .k{ font-size:11.5px; color:var(--text-2); }
+  .stat .v{ font-size:24px; font-weight:700; margin-top:2px; letter-spacing:-.5px; }
+  .stat .t{ font-size:11px; margin-top:2px; }
+  .t-up{ color:var(--green); } .t-warn{ color:var(--orange); }
+  .table-wrap{ flex:1; overflow:auto; padding:12px 20px 20px; }
+  table{ width:100%; border-collapse:separate; border-spacing:0; background:#fff; border:1px solid var(--hairline); border-radius:12px; overflow:hidden; }
+  th{ text-align:left; font-size:11.5px; color:var(--text-2); font-weight:600; padding:10px 14px; background:rgba(0,0,0,.025); border-bottom:1px solid var(--hairline); position:sticky; top:0; }
+  td{ padding:12px 14px; border-bottom:1px solid var(--hairline); font-size:12.5px; vertical-align:middle; }
+  tr:last-child td{ border-bottom:none; }
+  tbody tr:hover{ background:rgba(10,132,255,.045); }
+  .p-name{ font-weight:600; display:flex; align-items:center; gap:8px; }
+  .pill{ font-size:11px; padding:2px 9px; border-radius:9px; font-weight:600; white-space:nowrap; }
+  .pill.run{ background:rgba(48,209,88,.15); color:#1f8a3d; }
+  .pill.risk{ background:rgba(255,159,10,.16); color:#b26a00; }
+  .pill.done{ background:rgba(10,132,255,.13); color:var(--blue); }
+  .bar{ width:110px; height:5px; border-radius:3px; background:rgba(0,0,0,.07); overflow:hidden; display:inline-block; vertical-align:middle; }
+  .bar i{ display:block; height:100%; border-radius:3px; }
+  .pct{ font-size:11.5px; color:var(--text-2); margin-left:8px; }
+  .memos-link{ color:var(--blue); font-weight:600; }
+
+  /* ============ 视图3: 记忆库 ============ */
+  #view-memory{ flex-direction:column; }
+  .mem-toolbar{ display:flex; align-items:center; gap:10px; padding:14px 20px 10px; flex-wrap:wrap; }
+  .filter-tabs{ display:flex; gap:4px; background:rgba(0,0,0,.05); padding:2px; border-radius:8px; }
+  .filter-tabs button{ border:none; background:none; font:inherit; font-size:12px; padding:4px 12px; border-radius:6px; cursor:pointer; color:var(--text-2); }
+  .filter-tabs button.active{ background:#fff; font-weight:600; color:var(--text-1); box-shadow:0 1px 2px rgba(0,0,0,.1); }
+  .seg-inline{ display:flex; background:rgba(0,0,0,.06); border-radius:8px; padding:2px; }
+  .seg-inline button{ border:none; background:none; font:inherit; font-size:12px; padding:4px 12px; border-radius:6px; cursor:pointer; color:var(--text-2); }
+  .seg-inline button.active{ background:#fff; color:var(--text-1); font-weight:600; box-shadow:0 1px 3px rgba(0,0,0,.12), 0 0 0 .5px rgba(0,0,0,.04); }
+  .mem-scroll{ flex:1; overflow-y:auto; padding:6px 20px 20px; }
+  .mem-group-label{ font-size:12px; font-weight:700; color:var(--text-2); margin:14px 2px 10px; display:flex; align-items:center; gap:6px; }
+  .mem-group-label .g-cnt{ font-weight:500; color:var(--text-3); }
+  .mem-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px; align-content:start; }
+  .mcard{
+    background:#fff; border:1px solid var(--hairline); border-radius:12px; padding:14px; cursor:pointer;
+    transition:box-shadow .15s, transform .15s;
+  }
+  .mcard:hover{ box-shadow:0 4px 16px rgba(0,0,0,.1); transform:translateY(-1px); }
+  .mcard .top{ display:flex; align-items:center; gap:6px; margin-bottom:6px; }
+  .mcard .src{ margin-left:auto; font-size:11px; color:var(--text-3); }
+  .mcard h3{ font-size:13.5px; font-weight:600; line-height:1.4; margin-bottom:6px; }
+  .mcard p{ font-size:12px; color:var(--text-2); line-height:1.55; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+  .mcard .foot{ display:flex; align-items:center; gap:6px; margin-top:10px; flex-wrap:wrap; }
+  .ptag{ font-size:10.5px; padding:1px 8px; border-radius:8px; font-weight:600; }
+  .mcard .date{ margin-left:auto; font-size:11px; color:var(--text-3); }
+  .vtag{ font-size:10px; padding:1px 7px; border-radius:7px; background:rgba(255,159,10,.15); color:#b26a00; font-weight:700; }
+  .newtag{ font-size:10px; padding:1px 7px; border-radius:7px; background:rgba(48,209,88,.15); color:#1f8a3d; font-weight:700; }
+
+  /* ============ 视图4: 知识库预览 ============ */
+  #view-kb{ flex-direction:row; }
+  .kb-tree{ width:250px; flex-shrink:0; border-right:1px solid var(--hairline); overflow-y:auto; padding:12px 8px; background:rgba(0,0,0,.018); }
+  .kb-node{ padding:5px 10px; border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:7px; font-size:12.5px; }
+  .kb-node:hover{ background:rgba(0,0,0,.04); }
+  .kb-node.sel{ background:rgba(10,132,255,.14); font-weight:600; }
+  .kb-node.child{ padding-left:32px; }
+  .kb-node .cnt{ margin-left:auto; font-size:11px; color:var(--text-3); }
+  .kb-doc{ flex:1; overflow-y:auto; padding:28px 36px; min-width:0; }
+  .kb-doc .crumb{ font-size:12px; color:var(--text-2); margin-bottom:14px; }
+  .kb-doc h1{ font-size:24px; font-weight:700; letter-spacing:-.4px; margin-bottom:6px; }
+  .kb-doc .meta{ font-size:12px; color:var(--text-3); margin-bottom:20px; display:flex; gap:14px; }
+  .kb-doc h2{ font-size:16px; font-weight:700; margin:22px 0 8px; }
+  .kb-doc p, .kb-doc li{ font-size:13.5px; line-height:1.7; color:#3a3a3c; }
+  .kb-doc ul{ padding-left:20px; }
+  .callout{ border-left:3px solid var(--blue); background:rgba(10,132,255,.07); border-radius:0 8px 8px 0; padding:10px 14px; margin:14px 0; font-size:12.5px; line-height:1.6; }
+  .backlink{ margin-top:26px; border-top:1px solid var(--hairline); padding-top:14px; }
+  .backlink .bl{ display:inline-flex; align-items:center; gap:6px; font-size:12px; background:rgba(0,0,0,.04); border-radius:8px; padding:5px 10px; margin:0 6px 6px 0; color:var(--text-1); }
+
+  /* ============ 记忆详情抽屉（出处/版本/被引用） ============ */
+  .drawer-mask{
+    position:absolute; inset:0; background:rgba(0,0,0,.28); display:none; z-index:40;
+  }
+  .drawer-mask.show{ display:block; }
+  .drawer{
+    position:absolute; top:0; right:0; bottom:0; width:min(420px, 92%); background:#fff; z-index:50;
+    box-shadow:-12px 0 40px rgba(0,0,0,.18); display:none; flex-direction:column;
+    border-top-right-radius:0; border-bottom-right-radius:0;
+  }
+  .drawer.show{ display:flex; animation:slideIn .18s ease-out; }
+  @keyframes slideIn{ from{ transform:translateX(30px); opacity:.4; } to{ transform:none; opacity:1; } }
+  .drawer .d-head{ padding:16px 18px 12px; border-bottom:1px solid var(--hairline); display:flex; align-items:flex-start; gap:8px; }
+  .drawer .d-head h2{ font-size:15px; font-weight:700; line-height:1.4; flex:1; }
+  .drawer .d-close{ border:none; background:rgba(0,0,0,.05); width:26px; height:26px; border-radius:50%; cursor:pointer; font-size:13px; color:var(--text-2); flex-shrink:0; }
+  .drawer .d-body{ flex:1; overflow-y:auto; padding:14px 18px 20px; }
+  .d-sec{ margin-bottom:16px; }
+  .d-sec .d-label{ font-size:11px; font-weight:700; color:var(--text-3); margin-bottom:6px; letter-spacing:.3px; }
+  .d-sec .d-text{ font-size:13px; line-height:1.6; color:#3a3a3c; }
+  .d-kv{ display:flex; font-size:12px; padding:4px 0; }
+  .d-kv .k{ width:76px; color:var(--text-3); flex-shrink:0; }
+  .d-kv .v{ color:var(--text-1); }
+  .ver-item{ border:1px solid var(--hairline); border-radius:10px; padding:8px 10px; margin-bottom:8px; }
+  .ver-item.old{ background:rgba(0,0,0,.025); color:var(--text-2); }
+  .ver-item .vh{ display:flex; align-items:center; gap:6px; font-size:11.5px; font-weight:700; margin-bottom:4px; }
+  .ver-item .vh .vn{ background:rgba(10,132,255,.12); color:var(--blue); border-radius:6px; padding:0 6px; }
+  .ver-item.old .vh .vn{ background:rgba(0,0,0,.08); color:var(--text-2); }
+  .ver-item .vh .vd{ color:var(--text-3); font-weight:500; margin-left:auto; }
+  .ver-item p{ font-size:12px; line-height:1.55; }
+  .ver-item .vnote{ font-size:11px; color:var(--orange); margin-top:4px; }
+  .d-cited{ display:flex; flex-direction:column; gap:6px; }
+  .d-cited .ci{ font-size:12px; background:rgba(191,90,242,.07); border:1px solid rgba(191,90,242,.2); border-radius:8px; padding:6px 10px; }
+  .d-actions{ padding:12px 18px; border-top:1px solid var(--hairline); display:flex; gap:8px; }
+  .d-actions button{ flex:1; font:inherit; font-size:12.5px; padding:8px 0; border-radius:9px; cursor:pointer; border:1px solid var(--hairline); background:#fff; }
+  .d-actions button.primary{ background:var(--blue); color:#fff; border-color:transparent; font-weight:600; }
+  .d-actions button.danger{ color:var(--red); border-color:rgba(255,69,58,.35); }
+  .d-edit textarea{ width:100%; min-height:110px; border:1px solid var(--hairline); border-radius:10px; padding:10px; font:inherit; font-size:13px; line-height:1.55; resize:vertical; outline:none; }
+  .d-edit textarea:focus{ border-color:rgba(10,132,255,.5); box-shadow:0 0 0 3px rgba(10,132,255,.14); }
+
+  /* ============ 演示导引 & Toast ============ */
+  .guide{
+    position:absolute; right:16px; bottom:16px; z-index:60; width:250px;
+    background:rgba(255,255,255,.92); backdrop-filter:blur(16px);
+    border:1px solid var(--hairline); border-radius:14px; box-shadow:0 8px 30px rgba(0,0,0,.18);
+    padding:12px 14px;
+  }
+  .guide h4{ font-size:12px; font-weight:700; margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+  .guide h4 span{ margin-left:auto; font-weight:500; color:var(--text-3); font-size:10.5px; cursor:pointer; }
+  .guide .gstep{ display:flex; gap:8px; font-size:11.5px; padding:5px 6px; border-radius:8px; cursor:pointer; color:var(--text-2); line-height:1.4; }
+  .guide .gstep:hover{ background:rgba(10,132,255,.06); }
+  .guide .gstep .gn{ width:16px; height:16px; border-radius:50%; background:rgba(0,0,0,.08); color:var(--text-2); font-size:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+  .guide .gstep.done{ color:#1f8a3d; }
+  .guide .gstep.done .gn{ background:var(--green); color:#fff; }
+  .guide .gstep.now{ color:var(--blue); font-weight:600; }
+  .guide .gstep.now .gn{ background:var(--blue); color:#fff; }
+  .toast{
+    position:absolute; left:50%; bottom:26px; transform:translateX(-50%) translateY(12px); z-index:70;
+    background:rgba(29,29,31,.92); color:#fff; font-size:12.5px; padding:9px 16px; border-radius:10px;
+    opacity:0; pointer-events:none; transition:all .25s; max-width:70%; text-align:center; line-height:1.5;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* ============ API 设置弹窗 & 模式徽标 ============ */
+  .mode-badge{ font-size:11px; font-weight:600; padding:2px 9px; border-radius:9px; background:rgba(0,0,0,.06); color:var(--text-2); }
+  .mode-badge.api{ background:rgba(48,209,88,.15); color:#1f8a3d; }
+  .modal-mask{
+    position:absolute; inset:0; background:rgba(0,0,0,.32); display:none; z-index:80;
+    align-items:center; justify-content:center;
+  }
+  .modal-mask.show{ display:flex; }
+  .modal{ width:min(440px, 92%); background:#fff; border-radius:14px; box-shadow:0 20px 60px rgba(0,0,0,.3); overflow:hidden; }
+  .modal .m-head{ display:flex; align-items:center; padding:14px 18px 10px; }
+  .modal .m-head h3{ font-size:15px; font-weight:700; flex:1; }
+  .modal .m-body{ padding:4px 18px 12px; display:flex; flex-direction:column; gap:10px; }
+  .modal label{ font-size:12px; font-weight:600; color:var(--text-2); display:flex; flex-direction:column; gap:4px; }
+  .modal input, .modal select{
+    font:inherit; font-size:13px; padding:8px 10px; border:1px solid var(--hairline); border-radius:9px; outline:none; background:#fff; color:var(--text-1);
+  }
+  .modal input:focus, .modal select:focus{ border-color:rgba(10,132,255,.5); box-shadow:0 0 0 3px rgba(10,132,255,.13); }
+  .modal .m-note{ font-size:11.5px; color:var(--text-3); line-height:1.6; background:rgba(0,0,0,.03); border-radius:8px; padding:8px 10px; }
+  .modal .m-msg{ font-size:12px; min-height:16px; }
+  .modal .m-msg.ok{ color:#1f8a3d; }
+  .modal .m-msg.err{ color:var(--red); }
+  .modal .m-foot{ display:flex; gap:8px; padding:12px 18px 16px; border-top:1px solid var(--hairline); flex-wrap:wrap; }
+
+  ::-webkit-scrollbar{ width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb{ background:rgba(0,0,0,.18); border-radius:4px; border:2px solid transparent; background-clip:content-box; }
+  ::-webkit-scrollbar-thumb:hover{ background:rgba(0,0,0,.3); background-clip:content-box; }
+</style>
+</head>
+<body>
+
+<div class="window">
+  <!-- ================= 侧边栏 ================= -->
+  <aside class="sidebar">
+    <div class="traffic"><i class="c"></i><i class="m"></i><i class="z"></i></div>
+    <div class="search-wrap">
+      <div class="search"><span>🔍</span><input placeholder="搜索记忆 / 知识 / 项目"></div>
+    </div>
+
+    <div class="side-label">工作台</div>
+    <nav class="nav" id="mainNav">
+      <button class="active" data-view="chat"><span class="ico">💬</span>对话助手</button>
+      <button data-view="projects"><span class="ico">📊</span>项目进展表</button>
+      <button data-view="memory"><span class="ico">🧠</span>记忆库 <span class="badge" id="memBadge">7</span></button>
+      <button data-view="kb"><span class="ico">📚</span>知识库</button>
+    </nav>
+
+    <div class="side-label">进行中的项目</div>
+    <div style="padding:0 8px; overflow-y:auto;" id="sideProjects">
+      <div class="proj active"><span class="dot" style="background:var(--blue)"></span><span class="name">AI笔记 App 2.0</span><span class="mini">68%</span></div>
+      <div class="proj"><span class="dot" style="background:var(--purple)"></span><span class="name">官网改版</span><span class="mini">42%</span></div>
+      <div class="proj"><span class="dot" style="background:var(--orange)"></span><span class="name">用户增长实验</span><span class="mini">35%</span></div>
+      <div class="proj"><span class="dot" style="background:var(--green)"></span><span class="name">团队知识沉淀</span><span class="mini">81%</span></div>
+    </div>
+
+    <div class="side-foot">
+      <div class="avatar">默</div>
+      <div><b style="font-size:12.5px;">MemoPilot</b><small id="syncStatus">已同步 · 演示模式</small></div>
+    </div>
+  </aside>
+
+  <!-- ================= 主区域 ================= -->
+  <main class="main">
+    <div class="titlebar">
+      <h1 id="tbTitle">对话助手</h1>
+      <span class="sub" id="tbSub">会话 1 · 9月3日 · 当前项目：AI笔记 App 2.0</span>
+      <span class="mode-badge" id="modeBadge">演示模式</span>
+      <button class="tbtn ghost" id="gearBtn" style="margin-left:auto;">⚙️ 接入 API</button>
+    </div>
+
+    <!-- ========== 视图1：Chatbot（跨会话演示主舞台） ========== -->
+    <section class="view active" id="view-chat">
+      <div class="session-tabs" id="sessionTabs">
+        <span class="st-label">会话时间线 →</span>
+        <button class="stab active" data-sid="s1"><span class="d">会话 1 · 9月3日</span><span class="s">AI笔记 App 2.0</span><span class="stage">① 记录</span></button>
+        <button class="stab" data-sid="s2"><span class="d">会话 2 · 9月10日</span><span class="s">AI笔记 App 2.0</span><span class="stage">② 跨会话调用</span></button>
+        <button class="stab" data-sid="s3"><span class="d">会话 3 · 9月20日</span><span class="s">AI笔记 App 2.0</span><span class="stage">③ 冲突纠正</span></button>
+      </div>
+
+      <div class="chat-scroll" id="chatScroll"></div>
+
+      <div class="suggest-bar" id="suggestBar"></div>
+
+      <div class="chat-input-bar">
+        <div class="ctx-chips" id="ctxChips"></div>
+        <div class="input-box">
+          <textarea id="chatInput" rows="1" placeholder="输入消息…（演示建议：点击下方「建议操作」走完整链路）"></textarea>
+          <button class="send-btn" id="sendBtn">↑</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== 视图2：项目进展表 ========== -->
+    <section class="view" id="view-projects">
+      <div class="stat-row">
+        <div class="stat"><div class="k">进行中项目</div><div class="v">4</div><div class="t t-up">↑ 本周新增 1 个</div></div>
+        <div class="stat"><div class="k">记忆库总记忆</div><div class="v" id="statMemCount">7</div><div class="t t-up" id="statMemTrend">随演示实时更新</div></div>
+        <div class="stat"><div class="k">待处理风险</div><div class="v">3</div><div class="t t-warn">⚠ 1 项等级为高</div></div>
+        <div class="stat"><div class="k">知识库文档</div><div class="v">47</div><div class="t t-up">↑ 本周整理 5 篇</div></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>项目</th><th>状态</th><th>进度</th><th>下一里程碑</th><th>截止</th><th>关联记忆</th><th>最近动态</th></tr>
+          </thead>
+          <tbody id="projTbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========== 视图3：记忆库（与 MEMSTORE 实时联动） ========== -->
+    <section class="view" id="view-memory">
+      <div class="mem-toolbar">
+        <div class="filter-tabs" id="memTabs">
+          <button class="active" data-type="all">全部</button><button data-type="决策">决策</button><button data-type="会议">会议</button><button data-type="灵感">灵感</button><button data-type="待办">待办</button><button data-type="数据">数据</button>
+        </div>
+        <div class="seg seg-inline" id="memGroupSeg">
+          <button class="active" data-group="time">按时间</button><button data-group="project">按项目</button>
+        </div>
+        <span style="color:var(--text-3);font-size:12px;margin-left:auto;" id="memCount"></span>
+      </div>
+      <div class="mem-scroll" id="memScroll"></div>
+    </section>
+
+    <!-- ========== 视图4：知识库预览 ========== -->
+    <section class="view" id="view-kb">
+      <div class="kb-tree">
+        <div style="padding:2px 8px 10px;">
+          <div class="seg seg-inline" id="kbGroupSeg" style="display:flex;width:100%;">
+            <button class="active" data-group="project" style="flex:1;">按项目</button><button data-group="time" style="flex:1;">按时间</button>
+          </div>
+        </div>
+        <div id="kbTreeBody"></div>
+      </div>
+      <div class="kb-doc">
+        <div class="crumb">知识库 / AI笔记 App 2.0 / 产品文档</div>
+        <h1>块编辑技术选型</h1>
+        <div class="meta"><span>✦ 由 6 条记忆自动整理生成</span><span>更新于 9月7日</span><span>版本 v2.1</span></div>
+        <div class="callout">💡 <b>本文摘要：</b>对比了富文本与块编辑两种方案，最终决定 2.0 版本采用块编辑架构，存储层随之改为 JSON Block Tree，旧笔记通过一次性迁移脚本转换。</div>
+        <h2>背景</h2>
+        <p>1.x 的富文本编辑器在移动端存在排版漂移问题，且非结构化的 HTML 内容难以被 AI 功能（摘要、问答、记忆提取）可靠处理。2.0 需要编辑器同时服务好「人写」和「AI 读」。</p>
+        <h2>方案对比</h2>
+        <ul>
+          <li><b>继续富文本（ProseMirror 调优）</b>：成本低，但结构问题无法根治，AI 解析仍需额外清洗层。</li>
+          <li><b>块编辑（Block-based，自研 + 参考 Notion 模型）</b>：内容天然结构化，AI 可按块引用与改写；代价是存储层重写与旧数据迁移。</li>
+        </ul>
+        <h2>决策与依据</h2>
+        <p>选择块编辑。依据来自 9 月 7 日设计评审共识，以及增长实验中「AI 摘要」功能 62% 的高频使用率——结构化内容能直接放大这一核心功能的质量。</p>
+        <h2>风险与跟进</h2>
+        <ul>
+          <li>存储层重写预计延期 5-7 天，已同步至项目进展表（风险等级：中）。</li>
+          <li>旧笔记迁移脚本需在 9 月 20 日前完成灰度验证。</li>
+        </ul>
+        <div class="backlink">
+          <div style="font-size:12px;color:var(--text-2);margin-bottom:8px;">🔗 来源记忆（6）</div>
+          <span class="bl">🧠 编辑器改用块编辑方案</span>
+          <span class="bl">🧠 AI 摘要使用率 62%</span>
+          <span class="bl">🧠 移动端排版漂移问题清单</span>
+          <span class="bl">🧠 存储层重写排期评估</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 记忆详情抽屉 -->
+    <div class="drawer-mask" id="drawerMask"></div>
+    <div class="drawer" id="drawer"></div>
+
+    <!-- 演示导引 -->
+    <div class="guide" id="guide">
+      <h4>🧭 演示链路 <span id="guideToggle">收起</span></h4>
+      <div id="guideBody">
+        <div class="gstep" data-sid="s1"><span class="gn">1</span><span><b>记录</b>：会话1 说出两个决策 → 混合制写入记忆库</span></div>
+        <div class="gstep" data-sid="s2"><span class="gn">2</span><span><b>调用</b>：会话2 跨会话自动唤起（带出处）→ 跨项目命中先询问</span></div>
+        <div class="gstep" data-sid="s3"><span class="gn">3</span><span><b>纠正</b>：会话3 冲突裁决 → 版本留痕 → 影响面提示</span></div>
+        <div class="gstep" data-view="memory"><span class="gn">4</span><span><b>账本</b>：打开记忆库，点卡片看出处 / 版本历史 / 被引用记录</span></div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <!-- API 设置弹窗 -->
+    <div class="modal-mask" id="settingsMask">
+      <div class="modal">
+        <div class="m-head"><h3>⚙️ 接入真实大模型</h3><button class="d-close" id="setClose">✕</button></div>
+        <div class="m-body">
+          <label>API Key<input type="password" id="setKey" placeholder="sk-..." autocomplete="off"></label>
+          <label>接口地址 Base URL<input id="setBase" placeholder="留空默认 https://api.openai.com/v1"></label>
+          <label>模型<input id="setModel" placeholder="如 gpt-4o-mini / deepseek-chat / moonshot-v1-8k"></label>
+          <div class="m-note">🔒 密钥只保存在本机浏览器 localStorage，页面直连 API（OpenAI 兼容格式 /chat/completions），不经过任何中间服务器。若报 CORS / 网络错误，说明该服务商不允许浏览器直接调用，需要一个本地代理。配置后页面进入 <b>API 模式</b>：三个会话标签变为三个真实对话线程，记忆真实写入并持久化（刷新页面仍在）。</div>
+          <div class="m-msg" id="setMsg"></div>
+        </div>
+        <div class="m-foot">
+          <button class="tbtn ghost" id="setTest">测试连接</button>
+          <button class="tbtn ghost" id="setClear">清除密钥 · 回到演示模式</button>
+          <button class="tbtn primary" id="setSave" style="margin-left:auto;">保存并启用</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+/* =====================================================================
+ * 可交互原型：跨会话记忆 + 主动调用核心链路
+ * 单一事实源：MEMSTORE（记忆库）。对话视图与记忆库视图都由它驱动。
+ * ===================================================================== */
+
+/* ---------- 记忆库（单一事实源） ---------- */
+let midSeq = 100;
+const MEMSTORE = [
+  { id:'m-pre1', type:'会议', proj:'AI笔记 App 2.0', conf:'高', status:'生效中',
+    title:'移动端排版漂移问题清单',
+    body:'1.x 富文本编辑器在移动端存在排版漂移：图片宽度溢出、列表缩进错乱、代码块横向滚动失效。共 7 例，集中在 Android WebView。',
+    src:'8月28日 · 会话（语音速记）', date:'8月28日', day:'8月28日',
+    versions:[{v:1, date:'8月28日', note:'初始记录', body:'1.x 富文本编辑器在移动端存在排版漂移：图片宽度溢出、列表缩进错乱、代码块横向滚动失效。共 7 例，集中在 Android WebView。'}],
+    citedBy:[], isNew:false },
+  { id:'m-pre2', type:'数据', proj:'AI笔记 App 2.0', conf:'高', status:'生效中',
+    title:'AI 摘要功能使用率 62%',
+    body:'上线 30 天数据：AI 摘要周使用率 62%，为全部 AI 功能中最高；用户访谈显示「结构化程度」直接影响摘要质量评分。',
+    src:'8月30日 · 会话', date:'8月30日', day:'8月30日',
+    versions:[{v:1, date:'8月30日', note:'初始记录', body:'上线 30 天数据：AI 摘要周使用率 62%，为全部 AI 功能中最高；用户访谈显示「结构化程度」直接影响摘要质量评分。'}],
+    citedBy:[{where:'知识库《块编辑技术选型》', date:'9月7日'}], isNew:false },
+  { id:'m-ab', type:'数据', proj:'用户增长实验', conf:'高', status:'生效中',
+    title:'新手引导 A/B 实验第 3 天数据',
+    body:'B 组（渐进式引导）次日留存 41.2%，对照组 36.8%，提升 4.4pp；样本量 2,140，尚未达显著性，预计 9 月 12 日可出结论。',
+    src:'9月6日 · 会话', date:'9月6日', day:'9月6日',
+    versions:[{v:1, date:'9月6日', note:'初始记录', body:'B 组（渐进式引导）次日留存 41.2%，对照组 36.8%，提升 4.4pp；样本量 2,140，尚未达显著性，预计 9 月 12 日可出结论。'}],
+    citedBy:[], isNew:false },
+  { id:'m-gw', type:'会议', proj:'官网改版', conf:'高', status:'生效中',
+    title:'官网改版视觉评审纪要',
+    body:'首页 Hero 采用产品实景截图而非插画；品牌色保持靛蓝；动效预算控制在 300ms 内。遗留：3 张案例素材客户未回传，存在延期风险。',
+    src:'9月6日 · 语音速记', date:'9月6日', day:'9月6日',
+    versions:[{v:1, date:'9月6日', note:'初始记录', body:'首页 Hero 采用产品实景截图而非插画；品牌色保持靛蓝；动效预算控制在 300ms 内。遗留：3 张案例素材客户未回传，存在延期风险。'}],
+    citedBy:[], isNew:false },
+  { id:'m-td', type:'待办', proj:'官网改版', conf:'高', status:'生效中',
+    title:'催客户回传案例素材',
+    body:'官网改版缺 3 张客户案例截图，9 月 10 日前必须拿到，否则视觉稿终评延期。负责人：Melissa。',
+    src:'9月5日 · 会话', date:'9月5日', day:'9月5日',
+    versions:[{v:1, date:'9月5日', note:'初始记录', body:'官网改版缺 3 张客户案例截图，9 月 10 日前必须拿到，否则视觉稿终评延期。负责人：Melissa。'}],
+    citedBy:[], isNew:false },
+  { id:'m-km', type:'决策', proj:'团队知识沉淀', conf:'高', status:'生效中',
+    title:'记忆库采用「项目 + 标签」双维度归档',
+    body:'放弃纯文件夹树。每条记忆必须挂项目（可多个）+ 类型标签，知识库文档由记忆沉淀生成，保持单向流动：对话 → 记忆 → 知识。',
+    src:'9月4日 · 会话', date:'9月4日', day:'9月4日',
+    versions:[{v:1, date:'9月4日', note:'初始记录', body:'放弃纯文件夹树。每条记忆必须挂项目（可多个）+ 类型标签，知识库文档由记忆沉淀生成，保持单向流动：对话 → 记忆 → 知识。'}],
+    citedBy:[], isNew:false },
+  { id:'m-idea', type:'灵感', proj:'未关联', conf:'中', status:'生效中',
+    title:'记忆自动串联的产品想法',
+    body:'当同一项目的记忆累积到一定密度，自动生成「项目时间线」视图，把决策点、里程碑、数据变化串成可回放的故事线，用于复盘和汇报。',
+    src:'9月6日 · 快捷录入', date:'9月6日', day:'9月6日',
+    versions:[{v:1, date:'9月6日', note:'初始记录（快捷录入，未经对话确认）', body:'当同一项目的记忆累积到一定密度，自动生成「项目时间线」视图，把决策点、里程碑、数据变化串成可回放的故事线，用于复盘和汇报。'}],
+    citedBy:[], isNew:false },
+];
+const findMem = id => MEMSTORE.find(m=>m.id===id);
+
+/* ---------- 项目进展表数据（会被会话1的动作更新） ---------- */
+const PROJECTS = [
+  { name:'AI笔记 App 2.0', color:'var(--blue)',  pill:['run','进行中'], pct:68, milestone:'编辑器联调', ddl:'9月27日', memos:'AI笔记 App 2.0', activity:'9月3日 · 新增决策记忆' },
+  { name:'官网改版',       color:'var(--purple)',pill:['risk','有风险'],pct:42, milestone:'视觉稿终评', ddl:'9月12日', memos:'官网改版', activity:'9月6日 · 风险升级：素材延期' },
+  { name:'用户增长实验',   color:'var(--orange)',pill:['run','进行中'], pct:35, milestone:'A/B 实验 Readout', ddl:'9月18日', memos:'用户增长实验', activity:'9月6日 · 录入实验数据' },
+  { name:'团队知识沉淀',   color:'var(--green)', pill:['run','进行中'], pct:81, milestone:'Q3 知识盘点', ddl:'9月30日', memos:'团队知识沉淀', activity:'9月4日 · 新增归档决策' },
+  { name:'旧版数据迁移',   color:'var(--text-3)',pill:['done','已完成'],pct:100,milestone:'—', ddl:'—', memos:null, activity:'8月30日 · 项目归档' },
+];
+
+/* ---------- 会话与剧本状态 ---------- */
+const state = {
+  session:'s1',
+  steps:{ s1a:false, s1b:false, s2a:false, s2b:false, s3a:false },  // 剧本步骤是否完成
+  memCreated:{ mUser:null, mBlock:null },  // 演示中新创建的记忆 id
+  crossConfirmed:false,
+};
+const TRANSCRIPTS = { s1:[], s2:[], s3:[] };  // 每个会话的聊天 HTML（持久保留）
+
+const SESS_META = {
+  s1:{ label:'会话 1 · 9月3日 · 当前项目：AI笔记 App 2.0' },
+  s2:{ label:'会话 2 · 9月10日 · 当前项目：AI笔记 App 2.0' },
+  s3:{ label:'会话 3 · 9月20日 · 当前项目：AI笔记 App 2.0' },
+};
+
+/* ---------- 工具 ---------- */
+const $ = s => document.querySelector(s);
+function toast(msg, ms=2600){
+  const t = $('#toast'); t.innerHTML = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('show'), ms);
+}
+function citeHTML(id, label, cls=''){
+  const m = findMem(id);
+  const text = label || ('记忆 · ' + m.title);
+  return `<span class="cite ${cls}" data-mid="${id}">📎 ${text}</span>`;
+}
+function updateCounts(){
+  const n = MEMSTORE.length;
+  $('#memBadge').textContent = n;
+  $('#statMemCount').textContent = n;
+  $('#syncStatus').textContent = '已同步 · 记忆库 ' + n + ' 条';
+}
+function refreshMemViews(){ renderMemories(); renderProjects(); updateCounts(); }
+
+/* ---------- 聊天气泡 ---------- */
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function userBubble(text){
+  return `<div class="msg-row user"><div class="m-avatar u">我</div><div class="bubble">${esc(text)}</div></div>`;
+}
+function aiBubble(html){
+  return `<div class="msg-row"><div class="m-avatar ai">✦</div><div class="bubble">${html}</div></div>`;
+}
+function bannerHTML(inner){
+  return `<div class="session-banner"><span class="bi">🧠</span><div class="bt">${inner}</div></div>`;
+}
+
+/* =====================================================================
+ * 会话初始化（含跨会话记忆的"自动加载"演示）
+ * ===================================================================== */
+function initTranscripts(){
+  /* 会话1：开场即加载更早会话（8月底）的记忆 → 跨会话记忆的第一幕 */
+  TRANSCRIPTS.s1.push(bannerHTML(
+    `<b>跨会话记忆已加载</b>：自动带入「AI笔记 App 2.0」的 2 条历史记忆（来自 8月28日 / 8月30日 的会话），无需重新交代背景。
+     <div class="bm">${citeHTML('m-pre1','移动端排版漂移清单')}${citeHTML('m-pre2','AI 摘要使用率 62%')}</div>
+     <div style="font-size:11px;color:var(--text-2);margin-top:4px;">点击标记可查看出处原文 —— 每条记忆都能溯源。</div>`
+  ));
+  TRANSCRIPTS.s1.push(aiBubble(
+    `下午好。接着上次的进度：移动端排版漂移的 7 例问题清单还在跟进，AI 摘要使用率 62% 的数据可以作为 2.0 编辑器选型的论据。今天想推进什么？`
+  ));
+
+  /* 会话2（9月10日）：自动加载会话1沉淀的记忆 —— 跨会话记忆的核心一幕 */
+  TRANSCRIPTS.s2.push(bannerHTML(
+    `<b>新会话 · 跨会话记忆已加载</b>：自动带入「AI笔记 App 2.0」的项目记忆，包括 <b>9月3日（会话1）</b> 沉淀的决策，无需重复交代背景。
+     <div class="bm">{{CHIPS}}</div>
+     <div style="font-size:11px;color:var(--text-2);margin-top:4px;">会话1 中新记下的决策会出现在上面的记忆里 —— 点击可溯源。</div>`
+  ));
+
+  /* 会话3（9月20日） */
+  TRANSCRIPTS.s3.push(bannerHTML(
+    `<b>新会话 · 跨会话记忆已加载</b>：项目记忆已就位。距上次对话已 10 天，部分记忆引用时会主动降调提示时效。
+     <div class="bm">{{CHIPS}}</div>`
+  ));
+  TRANSCRIPTS.s3.push(aiBubble(
+    `一周不见。提醒两件事：知识库《块编辑技术选型》📎 上周已更新到 v2.1；另外「官网改版」项目的 3 张客户案例素材 ${citeHTML('m-td','待办 · 催客户回传素材')} 已过期 10 天，需要我跟进吗？`
+  ));
+}
+
+/* =====================================================================
+ * 建议操作（剧本）
+ * ===================================================================== */
+const SUGGESTIONS = {
+  s1:[
+    { key:'s1a', label:'💬 “目标用户定为二线城市中小企业主，帮我记着”', run:step_s1a },
+    { key:'s1b', label:'💬 “编辑器决定改用块编辑方案，看看排期影响”', run:step_s1b, lockUntil:'s1a' },
+  ],
+  s2:[
+    { key:'s2a', label:'💬 “基于目标用户，帮我起草渠道策略”', run:step_s2a },
+    { key:'s2b', label:'💬 “有没有相关数据可以参考？”', run:step_s2b, lockUntil:'s2a' },
+  ],
+  s3:[
+    { key:'s3a', label:'💬 “客户方向变了，我们改做一线城市大型连锁”', run:step_s3a },
+  ],
+};
+function renderSuggestions(){
+  const bar = $('#suggestBar');
+  const list = SUGGESTIONS[state.session] || [];
+  bar.innerHTML = '<span class="sb-label">建议操作 →</span>' + list.map(s=>{
+    const done = state.steps[s.key];
+    const locked = s.lockUntil && !state.steps[s.lockUntil];
+    const cls = done ? 'sg done' : 'sg';
+    const label = done ? '✓ ' + s.label.replace(/^💬 /,'') : s.label;
+    return `<button class="${cls}" data-key="${s.key}" ${done||locked?'disabled style="opacity:'+(locked?.35:.75)+';cursor:default"':''}>${label}</button>`;
+  }).join('');
+}
+
+/* ---------- 会话1 步骤 ---------- */
+function step_s1a(){
+  pushUser('s1', '刚开完选题会：2.0 的目标用户定为二线城市中小企业主。这个你记着。');
+  setTimeout(()=>{
+    const id = 'm' + (++midSeq);
+    state.memCreated.mUser = id;
+    MEMSTORE.unshift({
+      id, type:'决策', proj:'AI笔记 App 2.0', conf:'高', status:'生效中',
+      title:'目标用户：二线城市中小企业主',
+      body:'2.0 版本目标用户定为二线城市中小企业主。决策来源：9月3日选题会。该群体痛点：线下经营数字化程度低、需要低门槛的记录与管理工具。',
+      src:'会话1 · 9月3日', date:'9月3日', day:'9月3日',
+      versions:[{v:1, date:'9月3日', note:'初始记录（用户明确要求“这个你记着”→ 最高优先级写入）', body:'2.0 版本目标用户定为二线城市中小企业主。决策来源：9月3日选题会。该群体痛点：线下经营数字化程度低、需要低门槛的记录与管理工具。'}],
+      citedBy:[], isNew:true,
+    });
+    pushAI('s1',
+      `已记录 ✓ <span style="font-size:11px;color:var(--text-2)">（你明确陈述的单项目事实 → 高置信 · 低影响 → <b>自动入库</b>，轻提示不打扰）</span>
+       <div class="mem-card saved">
+         <div class="mc-head">🧠 决策记忆 <span class="tag">决策</span><span class="tag" style="background:rgba(10,132,255,.12);color:var(--blue)">AI笔记 App 2.0</span><span class="tag" style="background:rgba(48,209,88,.14);color:#1f8a3d">已入库</span></div>
+         <p><b>目标用户：二线城市中小企业主。</b>来源：9月3日选题会。痛点：数字化程度低、需要低门槛工具。</p>
+         <div class="conf-meta">出处：会话1 · 9月3日 · 你本人的明确陈述 ｜ 置信度：高 ｜ 状态：生效中 —— ${'<span class="cite" data-mid="'+id+'">📎 查看记忆详情</span>'}</div>
+       </div>
+       <div style="margin-top:8px;">这条记忆已进入记忆库（左上角计数 +1）。下次新会话我会自动带上它。</div>`
+    );
+    state.steps.s1a = true; afterStep('s1');
+    toast('✅ 记忆已写入记忆库 · 出处与版本历史已建立');
+  }, 550);
+}
+function step_s1b(){
+  pushUser('s1', '另外，编辑器决定改用块编辑方案，放弃富文本。帮我看看对排期有没有影响。');
+  setTimeout(()=>{
+    const id = 'm' + (++midSeq);
+    state.memCreated.mBlock = id;
+    MEMSTORE.unshift({
+      id, type:'决策', proj:'AI笔记 App 2.0', conf:'高', status:'生效中',
+      title:'编辑器改用块编辑方案',
+      body:'2.0 编辑器由富文本改为块编辑（Block-based）。原因：移动端排版一致性差（见「排版漂移清单」）；块结构利于 AI 处理。影响：编辑器模块、存储格式、旧笔记迁移。',
+      src:'会话1 · 9月3日', date:'9月3日', day:'9月3日',
+      versions:[{v:1, date:'9月3日', note:'初始记录', body:'2.0 编辑器由富文本改为块编辑（Block-based）。原因：移动端排版一致性差；块结构利于 AI 处理。影响：编辑器模块、存储格式、旧笔记迁移。'}],
+      citedBy:[{where:'知识库《块编辑技术选型》', date:'9月7日'}], isNew:true,
+    });
+    pushAI('s1',
+      `已记录 ✓ 这条决策与两条既有记忆直接相关，我建立了关联：${citeHTML('m-pre1','排版漂移清单')} ${citeHTML('m-pre2','AI 摘要 62%')}
+       <div class="mem-card saved">
+         <div class="mc-head">🧠 决策记忆 <span class="tag">决策</span><span class="tag" style="background:rgba(10,132,255,.12);color:var(--blue)">AI笔记 App 2.0</span><span class="tag" style="background:rgba(48,209,88,.14);color:#1f8a3d">已入库</span></div>
+         <p><b>编辑器方案变更：</b>富文本 → 块编辑。影响范围：编辑器模块、数据存储格式、旧笔记迁移。</p>
+         <div class="conf-meta">出处：会话1 · 9月3日 ｜ 置信度：高 ｜ 关联记忆 ×2 ｜ ${'<span class="cite" data-mid="'+id+'">📎 查看记忆详情</span>'}</div>
+       </div>
+       <div style="margin-top:10px;">关于排期：结合 ${citeHTML('m-pre2','记忆 · AI 摘要 62%')} 与知识库<span class="cite doc">📚《块编辑技术选型》</span>，存储层重写预计延期 <b>5-7 天</b>，「编辑器联调」顺延至 <b>9月27日</b>。已同步到项目进展表（风险等级：中）——进展表视图里的截止日期已更新。</div>`
+    );
+    PROJECTS[0].ddl = '9月27日';
+    PROJECTS[0].activity = '9月3日 · 新增 2 条决策记忆 · 风险同步';
+    state.steps.s1b = true; afterStep('s1');
+    toast('✅ 第 2 条记忆入库 · 项目进展表已联动更新');
+  }, 550);
+}
+
+/* ---------- 会话2 步骤 ---------- */
+function step_s2a(){
+  pushUser('s2', '基于我们定的目标用户，帮我起草一版渠道策略的思路。');
+  setTimeout(()=>{
+    const mUser = state.memCreated.mUser;
+    if(!mUser){
+      pushAI('s2', `我注意到你还没有在会话1里记录目标用户决策——建议先回到「会话1 · 9月3日」完成步骤①，体验才完整。`);
+      afterStep('s2'); return;
+    }
+    const m = findMem(mUser);
+    m.citedBy.push({where:'会话2 · 渠道策略讨论', date:'9月10日'});
+    pushAI('s2',
+      `好的。先明确前提：目标用户是<b>二线城市中小企业主</b> ${citeHTML(mUser,'记忆 · 9月3日会话1')} —— 这是 7 天前你在会话1 里定的，我直接引用，不用你再讲一遍。
+       <div style="margin-top:8px;">基于这个前提，渠道思路建议三条线：</div>
+       <div style="margin-top:4px;">① <b>本地生活服务垂类渠道</b>：该群体聚集在行业社群与本地服务商渠道，获客成本低；<br>② <b>内容营销</b>：以「小店数字化」实操案例为主，摘要功能 ${citeHTML('m-pre2','记忆 · AI 摘要 62%')} 是演示亮点；<br>③ <b>老带新</b>：中小企业主决策链短、圈子效应强，建议内置邀请激励。</div>
+       <div style="margin-top:8px;font-size:11.5px;color:var(--text-2);">⚠️ 注意：以上策略<b>建立在「目标用户=二线城市中小企业主」这条记忆之上</b>。如果它将来被纠正，这里的结论需要复核——我会记住这层依赖关系。</div>`
+    );
+    state.steps.s2a = true; afterStep('s2');
+    toast('📎 跨会话调用：7 天前的记忆被主动引用，并记录了「被谁引用」');
+  }, 600);
+}
+function step_s2b(){
+  pushUser('s2', '有没有相关数据可以参考？');
+  setTimeout(()=>{
+    pushAI('s2',
+      `我在你的其他项目里检索到一条可能相关的记忆——它属于<b>另一个项目</b>，按规则我不直接引用，先问你：
+       <div class="mem-card">
+         <div class="mc-head">🔶 跨项目命中 <span class="tag" style="background:rgba(255,159,10,.15);color:#b26a00">来自：用户增长实验</span><span class="tag">数据</span></div>
+         <p>「新手引导 A/B 实验第 3 天数据」——渐进式引导次日留存 +4.4pp。与渠道策略中的「老带新转化」环节可能相关。</p>
+         <div class="mc-actions">
+           <button class="save" id="crossYes">调出来参考</button>
+           <button id="crossNo">不用，不跨项目引用</button>
+         </div>
+         <div class="conf-meta">跨项目唤起规则：先询问、确认后才引用，来源项目全程可见。</div>
+       </div>`
+    );
+    afterStep('s2');
+  }, 550);
+}
+function crossProjectAnswer(yes){
+  if(yes){
+    state.crossConfirmed = true;
+    const m = findMem('m-ab');
+    m.citedBy.push({where:'会话2 · 渠道策略讨论（跨项目）', date:'9月10日'});
+    pushAI('s2',
+      `已调出：B 组渐进式引导次日留存 41.2%（+4.4pp）${citeHTML('m-ab','记忆 · 来源：用户增长实验','cross')}。<br><br>对渠道策略的含义：新用户前 3 步的引导质量显著影响留存，建议渠道投放落地页直接衔接渐进式引导流程。<span style="font-size:11.5px;color:var(--text-2);">（引用来源项目已标注，该次跨项目引用已记入此记忆的「被引用」记录。）</span>`
+    );
+    state.steps.s2b = true; afterStep('s2');
+    toast('🔶 跨项目引用已建立 · 来源项目全程可见');
+    refreshMemViews();
+  } else {
+    pushAI('s2', `好的，不引用。这条跨项目命中我不会再主动提起——你的「不用」已作为反馈记录，会降低后续类似唤起的优先级。`);
+    state.steps.s2b = true; afterStep('s2');
+  }
+}
+
+/* ---------- 会话3 步骤（纠正闭环） ---------- */
+function step_s3a(){
+  pushUser('s3', '客户方向变了：2.0 我们改做一线城市大型连锁，不再做二线中小商户了。');
+  setTimeout(()=>{
+    const mUser = state.memCreated.mUser;
+    if(!mUser){
+      pushAI('s3', `这条陈述与既有记忆的冲突检测需要在会话1 先产生「目标用户」记忆——建议先完成步骤①②。`);
+      afterStep('s3'); return;
+    }
+    const m = findMem(mUser);
+    pushAI('s3',
+      `⚠️ <b>检测到冲突</b>：你现在的陈述与 9月3日 的记忆不一致，需要你裁决——我不会默默覆盖旧记录：
+       <div class="mem-card conflict">
+         <div class="mc-head">⚡ 记忆冲突待裁决 <span class="tag">决策</span><span class="tag" style="background:rgba(10,132,255,.12);color:var(--blue)">AI笔记 App 2.0</span></div>
+         <p>🅰️ <b>既有记忆（9月3日，v1）</b>：目标用户 = 二线城市中小企业主 ${citeHTML(mUser,'出处 · 会话1')}</p>
+         <p style="margin-top:6px;">🅱️ <b>你的新陈述（刚刚）</b>：目标用户 = 一线城市大型连锁</p>
+         <div class="mc-actions">
+           <button class="save" id="conflictNew">以新陈述为准（生成 v2）</button>
+           <button id="conflictKeep">两条都保留（不同场景）</button>
+         </div>
+         <div class="conf-meta">冲突检测：新事实不是追加，而是触发对旧记忆的裁决。</div>
+       </div>`
+    );
+    afterStep('s3');
+  }, 600);
+}
+function conflictResolve(keepBoth){
+  const m = findMem(state.memCreated.mUser);
+  if(keepBoth){
+    pushAI('s3', `已并存保留：v1（二线城市中小企业主）标记为「历史方向」，新陈述作为新记忆独立入库。两条出处各自可查。`);
+    state.steps.s3a = true; afterStep('s3'); refreshMemViews(); return;
+  }
+  /* 以新为准：追加版本、旧版本作废留痕 */
+  m.versions.push({ v:2, date:'9月20日', note:'用户纠正（会话3 冲突裁决：以新陈述为准）',
+    body:'2.0 版本目标用户改为一线城市大型连锁。纠正来源：9月20日会话3，客户方向调整。' });
+  m.body = m.versions[1].body;
+  m.title = '目标用户：一线城市大型连锁';
+  m.status = '已纠正'; m.conf = '高'; m.date = '9月20日'; m.day = '9月20日'; m.src = '会话3 · 9月20日（纠正）';
+  const cites = m.citedBy.map(c=>`<div class="ci">📌 ${c.where} · ${c.date}</div>`).join('');
+  pushAI('s3',
+    `✅ 已纠正。处理结果：
+     <div style="margin-top:6px;">① 记忆更新为 <b>v2：一线城市大型连锁</b> ${citeHTML(m.id,'记忆 · v2 · 9月20日')}；v1 未删除，标记「已纠正」留痕；<br>② <b>影响面提示</b>——这条记忆被以下下游内容引用过，相关结论建议复核：</div>
+     <div class="d-cited" style="margin-top:6px;">${cites || '<div class="ci">（暂未被引用）</div>'}</div>
+     <div style="margin-top:8px;font-size:12px;color:var(--text-2);">现在打开「记忆库」，点这张卡片，可以看到完整版本历史（v1→v2）与被引用记录 —— 任何一条记忆都能回答「哪次记录出了问题」。</div>`
+  );
+  state.steps.s3a = true; afterStep('s3'); refreshMemViews();
+  toast('✅ 记忆已纠正（v2）· 旧版本留痕 · 影响面已提示');
+}
+
+/* ---------- 剧本推进与界面刷新 ---------- */
+function pushUser(sid, text){
+  TRANSCRIPTS[sid].push(userBubble(text));
+  renderChat();
+}
+function pushAI(sid, html){
+  TRANSCRIPTS[sid].push(aiBubble(html));
+  renderChat();
+}
+function afterStep(sid){
+  renderSuggestions(); refreshGuide(); refreshMemViews();
+  $('#chatScroll').scrollTop = $('#chatScroll').scrollHeight;
+}
+
+/* ---------- 会话渲染与切换 ---------- */
+function bannerChips(){
+  return [state.memCreated.mUser, state.memCreated.mBlock, 'm-pre1', 'm-pre2']
+    .filter(Boolean).map(id=>citeHTML(id)).join('');
+}
+function renderChat(){
+  $('#chatScroll').innerHTML = TRANSCRIPTS[state.session].join('').replaceAll('{{CHIPS}}', bannerChips());
+  $('#chatScroll').scrollTop = $('#chatScroll').scrollHeight;
+  renderCtxChips();
+}
+function renderCtxChips(){
+  const ids = [state.memCreated.mUser, state.memCreated.mBlock, 'm-pre1', 'm-pre2'];
+  $('#ctxChips').innerHTML =
+    `<span class="chip">📎 当前项目：AI笔记 App 2.0</span>` +
+    `<span class="chip">🧠 项目记忆 ${2 + ids.filter(i=>i&&findMem(i)).length - 2} 条在场</span>` +
+    (state.crossConfirmed ? `<span class="chip" style="background:rgba(255,159,10,.13);color:#b26a00">🔶 含 1 条跨项目引用</span>` : '');
+}
+function switchSession(sid){
+  state.session = sid;
+  document.querySelectorAll('.stab').forEach(b=>b.classList.toggle('active', b.dataset.sid===sid));
+  $('#tbSub').textContent = SESS_META[sid].label;
+  renderChat(); renderSuggestions(); refreshGuide();
+}
+document.querySelectorAll('.stab').forEach(b=>b.addEventListener('click', ()=>switchSession(b.dataset.sid)));
+
+/* 建议操作点击 */
+$('#suggestBar').addEventListener('click', e=>{
+  const btn = e.target.closest('.sg'); if(!btn || btn.disabled) return;
+  const s = (SUGGESTIONS[state.session]||[]).find(x=>x.key===btn.dataset.key);
+  if(s) s.run();
+});
+
+/* 气泡内按钮（事件委托）：跨项目确认 / 冲突裁决 / 记忆引用查看 */
+$('#chatScroll').addEventListener('click', e=>{
+  const cite = e.target.closest('.cite');
+  if(cite && cite.dataset.mid){ openDrawer(cite.dataset.mid); return; }
+  if(e.target.id==='crossYes'){ crossProjectAnswer(true); e.target.disabled=true; const n=document.getElementById('crossNo'); if(n)n.disabled=true; }
+  if(e.target.id==='crossNo'){ crossProjectAnswer(false); e.target.disabled=true; const y=document.getElementById('crossYes'); if(y)y.disabled=true; }
+  if(e.target.id==='conflictNew'){ conflictResolve(false); }
+  if(e.target.id==='conflictKeep'){ conflictResolve(true); }
+});
+
+/* 自由输入：API 模式走真实模型，演示模式走剧本兜底 */
+function send(){
+  const input = $('#chatInput'); const t = input.value.trim(); if(!t) return;
+  input.value='';
+  if(window.API_MODE && typeof apiSend==='function'){ apiSend(t); return; }
+  pushUser(state.session, t);
+  setTimeout(()=>{
+    pushAI(state.session,
+      `收到。这是可交互原型——自由输入不会被写入记忆库。<b>建议点击上方「建议操作」</b>，完整走一遍 ①记录 → ②跨会话调用 → ③纠正 的链路；也可以切换到「记忆库」视图，点击任意卡片查看出处与版本历史。`
+    );
+  }, 400);
+}
+$('#sendBtn').addEventListener('click', send);
+$('#chatInput').addEventListener('keydown', e=>{ if((e.metaKey||e.ctrlKey)&&e.key==='Enter') send(); });
+
+/* =====================================================================
+ * 记忆详情抽屉：出处 / 版本历史 / 被引用 / 编辑 / 删除
+ * ===================================================================== */
+let drawerMemId = null, drawerEditing = false, deleteArmed = false;
+function openDrawer(id){
+  drawerMemId = id; drawerEditing = false; deleteArmed = false;
+  renderDrawer();
+  $('#drawerMask').classList.add('show'); $('#drawer').classList.add('show');
+}
+function closeDrawer(){
+  $('#drawerMask').classList.remove('show'); $('#drawer').classList.remove('show');
+}
+$('#drawerMask').addEventListener('click', closeDrawer);
+
+function renderDrawer(){
+  const m = findMem(drawerMemId); if(!m){ closeDrawer(); return; }
+  const ts = TYPE_STYLE[m.type] || ['rgba(0,0,0,.06)','var(--text-2)'];
+  const vers = [...m.versions].reverse().map((v,i)=>{
+    const old = i>0;
+    return `<div class="ver-item${old?' old':''}">
+      <div class="vh"><span class="vn">v${v.v}</span>${old?'<span style="color:var(--red);font-size:10.5px;">已作废</span>':'<span style="color:#1f8a3d;font-size:10.5px;">当前生效</span>'}<span class="vd">${v.date}</span></div>
+      <p>${v.body}</p><div class="vnote">${v.note}</div>
+    </div>`;
+  }).join('');
+  const cited = m.citedBy.length
+    ? m.citedBy.map(c=>`<div class="ci">📌 ${c.where} · ${c.date}</div>`).join('')
+    : '<div class="ci" style="background:rgba(0,0,0,.03);border-color:var(--hairline);color:var(--text-2)">暂未被下游引用</div>';
+
+  const bodyHTML = drawerEditing
+    ? `<div class="d-edit"><textarea id="editArea">${m.body}</textarea>
+       <div style="font-size:11px;color:var(--text-2);margin-top:6px;">保存将生成新版本（v${m.versions.length+1}），当前版本留痕为历史版本 —— 纠正不是覆盖。</div></div>`
+    : `<div class="d-text">${m.body}</div>`;
+
+  $('#drawer').innerHTML = `
+    <div class="d-head"><h2>${m.title}</h2><button class="d-close" id="dClose">✕</button></div>
+    <div class="d-body">
+      <div class="d-sec">
+        <span class="ptag" style="background:${ts[0]};color:${ts[1]}">${m.type}</span>
+        <span class="ptag" style="background:rgba(0,0,0,.05);color:var(--text-2)">${m.proj}</span>
+        <span class="ptag" style="background:${m.status==='已纠正'?'rgba(255,159,10,.15);color:#b26a00':'rgba(48,209,88,.13);color:#1f8a3d'}">${m.status} · v${m.versions.length}</span>
+        ${m.isNew?'<span class="newtag">本次演示新增</span>':''}
+      </div>
+      <div class="d-sec"><div class="d-label">内容（当前版本）</div>${bodyHTML}</div>
+      <div class="d-sec"><div class="d-label">溯源信息</div>
+        <div class="d-kv"><span class="k">出处</span><span class="v">${m.src}</span></div>
+        <div class="d-kv"><span class="k">记录时间</span><span class="v">${m.versions[0].date}</span></div>
+        <div class="d-kv"><span class="k">置信度</span><span class="v">${m.conf}</span></div>
+        <div class="d-kv"><span class="k">密级隔离</span><span class="v">普通（允许跨项目唤起，唤起前需用户确认）</span></div>
+      </div>
+      <div class="d-sec"><div class="d-label">版本历史（${m.versions.length}）</div>${vers}</div>
+      <div class="d-sec"><div class="d-label">被引用记录（${m.citedBy.length}）—— 纠正时的影响面依据</div><div class="d-cited">${cited}</div></div>
+    </div>
+    <div class="d-actions">
+      ${drawerEditing
+        ? `<button class="primary" id="dSave">保存为新版本</button><button id="dCancel">取消</button>`
+        : `<button class="primary" id="dEdit">✏️ 纠正 / 编辑</button><button class="danger" id="dDel">${deleteArmed?'再点一次，确认删除':'🗑 删除（这个不用记）'}</button>`}
+    </div>`;
+
+  $('#dClose').onclick = closeDrawer;
+  if(drawerEditing){
+    $('#dSave').onclick = ()=>{
+      const v = $('#editArea').value.trim(); if(!v) return;
+      m.versions.push({ v:m.versions.length+1, date:'演示中', note:'用户通过记忆管理页纠正', body:v });
+      m.body = v; m.status = '已纠正'; m.isNew = true;
+      drawerEditing = false; renderDrawer(); refreshMemViews();
+      toast('✅ 已保存为新版本 v' + m.versions.length + ' · 旧版本留痕可查');
+    };
+    $('#dCancel').onclick = ()=>{ drawerEditing = false; renderDrawer(); };
+  } else {
+    $('#dEdit').onclick = ()=>{ drawerEditing = true; renderDrawer(); };
+    $('#dDel').onclick = ()=>{
+      if(!deleteArmed){ deleteArmed = true; renderDrawer(); return; }
+      const i = MEMSTORE.findIndex(x=>x.id===m.id);
+      MEMSTORE.splice(i,1);
+      closeDrawer(); refreshMemViews();
+      toast('🗑 已彻底删除（含版本历史）。真实产品中会先提示影响面。');
+    };
+  }
+}
+
+/* =====================================================================
+ * 记忆库视图（数据驱动，与 MEMSTORE 实时联动）
+ * ===================================================================== */
+const TYPE_STYLE = {
+  '决策':['rgba(191,90,242,.14)','var(--purple)'],
+  '数据':['rgba(255,159,10,.16)','#b26a00'],
+  '会议':['rgba(48,209,88,.15)','#1f8a3d'],
+  '灵感':['rgba(10,132,255,.13)','var(--blue)'],
+  '待办':['rgba(255,69,58,.14)','var(--red)'],
+};
+let memFilter = 'all', memGroup = 'time';
+function memCardHTML(m){
+  const ts = TYPE_STYLE[m.type];
+  const ver = m.versions.length>1 ? `<span class="vtag">v${m.versions.length} · ${m.status}</span>` : '';
+  const nw = m.isNew ? '<span class="newtag">NEW</span>' : '';
+  return `<div class="mcard" data-mid="${m.id}">
+    <div class="top"><span class="ptag" style="background:${ts[0]};color:${ts[1]}">${m.type}</span>${ver}${nw}<span class="src">${m.src}</span></div>
+    <h3>${m.title}</h3><p>${m.body}</p>
+    <div class="foot"><span class="ptag" style="background:rgba(0,0,0,.05);color:var(--text-2)">${m.proj}</span><span class="date">${m.date} · 被引用 ${m.citedBy.length}</span></div>
+  </div>`;
+}
+function renderMemories(){
+  const list = MEMSTORE.filter(m=> memFilter==='all' || m.type===memFilter);
+  const groups = {};
+  const key = m => memGroup==='time' ? m.day : m.proj;
+  list.forEach(m=>{ (groups[key(m)] ||= []).push(m); });
+  $('#memScroll').innerHTML = Object.entries(groups).map(([g, items])=>
+    `<div class="mem-group-label">🕐 ${g}<span class="g-cnt">${items.length} 条</span></div>
+     <div class="mem-grid">${items.map(memCardHTML).join('')}</div>`
+  ).join('') || '<div style="color:var(--text-3);padding:20px;">该分类下暂无记忆</div>';
+  $('#memCount').textContent = `共 ${list.length} 条 · 点击卡片查看出处 / 版本 / 被引用`;
+}
+document.querySelectorAll('#memTabs button').forEach(b=>b.addEventListener('click', ()=>{
+  document.querySelectorAll('#memTabs button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); memFilter = b.dataset.type; renderMemories();
+}));
+document.querySelectorAll('#memGroupSeg button').forEach(b=>b.addEventListener('click', ()=>{
+  document.querySelectorAll('#memGroupSeg button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); memGroup = b.dataset.group; renderMemories();
+}));
+$('#memScroll').addEventListener('click', e=>{
+  const card = e.target.closest('.mcard'); if(card) openDrawer(card.dataset.mid);
+});
+
+/* =====================================================================
+ * 项目进展表（关联记忆数与 MEMSTORE 联动）
+ * ===================================================================== */
+function renderProjects(){
+  $('#projTbody').innerHTML = PROJECTS.map(p=>{
+    const cnt = p.memos ? MEMSTORE.filter(m=>m.proj===p.memos).length : 12;
+    return `<tr>
+      <td><span class="p-name"><span style="width:8px;height:8px;border-radius:50%;background:${p.color};display:inline-block"></span>${p.name}</span></td>
+      <td><span class="pill ${p.pill[0]}">${p.pill[1]}</span></td>
+      <td><span class="bar"><i style="width:${p.pct}%;background:${p.color}"></i></span><span class="pct">${p.pct}%</span></td>
+      <td>${p.milestone}</td><td>${p.ddl}</td>
+      <td><span class="memos-link">${cnt} 条</span></td>
+      <td style="color:var(--text-2)">${p.activity}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* =====================================================================
+ * 知识库树（保持原有演示）
+ * ===================================================================== */
+const KB_BY_PROJECT = [
+  { label:'AI笔记 App 2.0', nodes:[
+    { name:'📁 产品文档', cnt:'8' }, { name:'📄 块编辑技术选型', child:1, sel:1 },
+    { name:'📄 2.0 信息架构', child:1 }, { name:'📄 数据迁移方案 v3', child:1 },
+    { name:'📁 会议纪要', cnt:'12' }, { name:'📁 决策记录', cnt:'9' } ]},
+  { label:'用户增长实验', nodes:[ { name:'📁 实验报告', cnt:'6' }, { name:'📁 增长笔记', cnt:'11' } ]},
+  { label:'团队知识沉淀', nodes:[ { name:'📁 方法论', cnt:'7' } ]},
+];
+const KB_BY_TIME = [
+  { label:'9月7日', nodes:[ { name:'📄 块编辑技术选型', sel:1, meta:'AI笔记 2.0' }, { name:'📄 A/B 实验数据快报', meta:'增长实验' } ]},
+  { label:'9月6日', nodes:[ { name:'📄 官网视觉评审纪要', meta:'官网改版' }, { name:'📄 记忆串联功能构想', meta:'未关联' } ]},
+  { label:'9月4日', nodes:[ { name:'📄 记忆归档双维度设计', meta:'知识沉淀' } ]},
+  { label:'9月1日', nodes:[ { name:'📄 2.0 信息架构', meta:'AI笔记 2.0' }, { name:'📄 数据迁移方案 v3', meta:'AI笔记 2.0' } ]},
+];
+function renderKbTree(mode){
+  const data = mode==='project' ? KB_BY_PROJECT : KB_BY_TIME;
+  $('#kbTreeBody').innerHTML = data.map(g=>
+    `<div class="side-label" style="padding:10px 10px 6px;">${g.label}</div>` +
+    g.nodes.map(n=>
+      `<div class="kb-node${n.child?' child':''}${n.sel?' sel':''}">${n.name}${n.cnt?`<span class="cnt">${n.cnt}</span>`:''}${n.meta?`<span class="cnt">${n.meta}</span>`:''}</div>`
+    ).join('')
+  ).join('');
+  document.querySelectorAll('#kbTreeBody .kb-node').forEach(n=>n.addEventListener('click', ()=>{
+    document.querySelectorAll('#kbTreeBody .kb-node').forEach(x=>x.classList.remove('sel'));
+    n.classList.add('sel');
+  }));
+}
+document.querySelectorAll('#kbGroupSeg button').forEach(b=>b.addEventListener('click', ()=>{
+  document.querySelectorAll('#kbGroupSeg button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); renderKbTree(b.dataset.group);
+}));
+
+/* =====================================================================
+ * 主导航 / 演示导引
+ * ===================================================================== */
+const VIEW_TITLES = {
+  chat:     ['对话助手',  ''],
+  projects: ['项目进展表','4 个进行中 · 与记忆库实时联动'],
+  memory:   ['记忆库',    '记忆的透明账本：出处 / 版本 / 被引用 / 可纠正'],
+  kb:       ['知识库',    '47 篇文档 · 由记忆自动整理'],
+};
+function switchView(v){
+  document.querySelectorAll('.view').forEach(el=>el.classList.toggle('active', el.id==='view-'+v));
+  document.querySelectorAll('#mainNav button').forEach(b=>b.classList.toggle('active', b.dataset.view===v));
+  $('#tbTitle').textContent = VIEW_TITLES[v][0];
+  $('#tbSub').textContent = v==='chat' ? SESS_META[state.session].label : VIEW_TITLES[v][1];
+}
+document.querySelectorAll('#mainNav button').forEach(b=>b.addEventListener('click', ()=>switchView(b.dataset.view)));
+document.querySelectorAll('#sideProjects .proj').forEach(p=>p.addEventListener('click', ()=>{
+  document.querySelectorAll('#sideProjects .proj').forEach(x=>x.classList.remove('active'));
+  p.classList.add('active');
+}));
+
+function refreshGuide(){
+  const s = state.steps;
+  const done = [s.s1a&&s.s1b, s.s2a&&s.s2b, s.s3a, false];
+  document.querySelectorAll('#guide .gstep').forEach((g,i)=>{
+    g.classList.toggle('done', !!done[i]);
+    g.classList.toggle('now', !done[i] && (i===0 || done[i-1]));
+  });
+}
+document.querySelectorAll('#guide .gstep').forEach(g=>g.addEventListener('click', ()=>{
+  if(g.dataset.sid){ switchView('chat'); switchSession(g.dataset.sid); }
+  if(g.dataset.view){ switchView(g.dataset.view); }
+}));
+$('#guideToggle').addEventListener('click', ()=>{
+  const b = $('#guideBody'); const open = b.style.display!=='none';
+  b.style.display = open?'none':'block';
+  $('#guideToggle').textContent = open?'展开':'收起';
+});
+
+/* ---------- 启动 ---------- */
+initTranscripts();
+renderChat(); renderSuggestions(); renderMemories(); renderProjects(); renderKbTree('project'); updateCounts(); refreshGuide();
+</script>
+
+<script>
+/* =====================================================================
+ * API 模式：接入真实大模型
+ * - 密钥仅存本机 localStorage，浏览器直连 API
+ * - MEMSTORE 注入系统提示词；模型用 [[m:id]] 引用记忆、用 ```memory 块提交候选记忆
+ * - 记忆与对话线程持久化（localStorage），刷新/重开页面记忆仍在 = 真实跨会话
+ * ===================================================================== */
+window.API_MODE = false;
+const SETTINGS_KEY = 'mp_settings', MEM_KEY = 'mp_memories_v1', THREAD_KEY = 'mp_threads_v1';
+let SETTINGS = null;
+try{ SETTINGS = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null'); }catch(e){}
+
+const THREADS = { s1:[], s2:[], s3:[] };   // API 模式下的真实对话历史 [{role, content}]
+try{
+  const saved = JSON.parse(localStorage.getItem(THREAD_KEY) || 'null');
+  if(saved) ['s1','s2','s3'].forEach(k=>{ if(Array.isArray(saved[k])) THREADS[k]=saved[k]; });
+}catch(e){}
+
+function persistThreads(){ try{ localStorage.setItem(THREAD_KEY, JSON.stringify(THREADS)); }catch(e){} }
+function persistMem(){ if(window.API_MODE){ try{ localStorage.setItem(MEM_KEY, JSON.stringify(MEMSTORE)); }catch(e){} } }
+function loadPersistedMem(){
+  try{
+    const arr = JSON.parse(localStorage.getItem(MEM_KEY) || 'null');
+    if(Array.isArray(arr) && arr.length){ MEMSTORE.length = 0; arr.forEach(m=>MEMSTORE.push(m)); }
+  }catch(e){}
+  /* 防止刷新后 midSeq 从 100 重新计数，撞上已持久化的记忆 id */
+  MEMSTORE.forEach(m=>{
+    const n = parseInt(String(m.id).replace(/^m/,''), 10);
+    if(!isNaN(n) && n >= midSeq) midSeq = n + 1;
+  });
+}
+
+/* ---------- 系统提示词：记忆库 + 引用/写入协议 ---------- */
+function buildSystem(){
+  const mems = MEMSTORE.map(m=>
+    `[${m.id}]（${m.type}｜项目:${m.proj}｜${m.date}｜v${m.versions.length}｜${m.status}｜出处:${m.src}）${m.title}：${m.body}`
+  ).join('\n');
+  const projs = PROJECTS.map(p=>`${p.name}（${p.pill[1]} ${p.pct}%）`).join('、');
+  return `你是 MemoPilot，一个面向知识工作者的长期记忆助理。你拥有用户的长期记忆库（下方），并遵守以下铁律：
+
+【引用协议】使用任何记忆内容时，必须在该句末尾标注 [[m:记忆id]]，例如"目标用户是二线城市中小企业主 [[m:m01]]"。绝不允许无标记地复述记忆内容——用户需要一眼区分"记忆"与"你的推理"。
+【写入协议】当用户陈述了值得长期记住的信息（决策、结论、偏好、项目状态变化、关键数据），在回复末尾附加一个候选记忆块，格式严格为：
+\`\`\`memory
+{"title":"不超过20字的标题","body":"规范化的事实陈述","type":"决策|数据|会议|灵感|待办","project":"项目名或 未关联"}
+\`\`\`
+是否入库由用户点击确认，你不要声称"已记住"，只说"已生成候选记忆，请确认"。
+【冲突协议】用户的新陈述与既有记忆矛盾时，明确指出冲突、引用旧记忆标记 [[m:id]]，并询问以哪条为准——绝不默默覆盖。
+【跨项目协议】引用与用户当前话题所属项目不同的记忆前，先征得用户同意再引用。
+【时效协议】引用超过两周未验证的记忆时，主动提醒其可能过时。
+【纠正协议】用户指出记忆错误时，引导用户打开记忆库卡片编辑（或直接在对话中确认新事实后生成候选记忆块），并提示该记忆的"被引用"影响面。
+
+当前项目列表：${projs}。
+
+长期记忆库（共 ${MEMSTORE.length} 条）：
+${mems || '（空）'}
+
+用中文回答，简洁、结论先行。`;
+}
+
+/* ---------- API 调用（OpenAI 兼容格式） ---------- */
+async function callLLM(sid){
+  const sys = buildSystem();
+  const msgs = THREADS[sid];
+  const url = (SETTINGS.baseURL || 'https://api.openai.com/v1') + '/chat/completions';
+  const r = await fetch(url, {
+    method:'POST',
+    headers:{ 'content-type':'application/json', 'authorization':'Bearer ' + SETTINGS.apiKey },
+    body: JSON.stringify({ model: SETTINGS.model || 'gpt-4o-mini', messages: [{role:'system', content:sys}, ...msgs] }),
+  });
+  if(!r.ok) throw new Error('HTTP ' + r.status + ' · ' + (await r.text()).slice(0,200));
+  const data = await r.json();
+  return data.choices?.[0]?.message?.content || '（空回复）';
+}
+
+/* ---------- 回复渲染：[[m:id]] → 引用chip；```memory 块 → 候选确认卡 ---------- */
+function renderReply(raw){
+  const cards = [];
+  let text = String(raw).replace(/```memory\s*([\s\S]*?)```/g, (_, json)=>{
+    let parsed = null;
+    try{ parsed = JSON.parse(json.trim()); }catch(e){}
+    if(parsed && parsed.title){
+      const payload = encodeURIComponent(JSON.stringify(parsed));
+      cards.push(`CARD<div class="mem-card">
+        <div class="mc-head">🧠 候选记忆 <span class="tag">${esc(parsed.type||'决策')}</span><span class="tag" style="background:rgba(10,132,255,.12);color:var(--blue)">${esc(parsed.project||'未关联')}</span><span class="tag" style="background:rgba(0,0,0,.06);color:var(--text-2)">待确认</span></div>
+        <p><b>${esc(parsed.title)}</b><br>${esc(parsed.body||'')}</p>
+        <div class="mc-actions"><button class="save mem-save" data-payload="${payload}">✓ 存入记忆库</button><button class="mem-skip">忽略</button></div>
+        <div class="conf-meta">混合制写入：模型生成候选，你确认后才入库。</div>
+      </div>/CARD`);
+      return 'CARD' + (cards.length-1) + '';
+    }
+    return '';
+  });
+  text = esc(text)
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+    .replace(/\[\[m:([a-zA-Z0-9\-_]+)\]\]/g, (_, id)=>{
+      const m = findMem(id);
+      return m ? citeHTML(id) : `<span class="cite" style="opacity:.5">📎 未知记忆 ${esc(id)}</span>`;
+    })
+    .replace(/\n/g, '<br>');
+  text = text.replace(/CARD(\d+)/g, (_, i)=>cards[+i] || '');
+  return text.replaceAll('CARD','').replaceAll('/CARD','');
+}
+
+/* ---------- API 模式收发 ---------- */
+async function apiSend(text){
+  const sid = state.session;
+  pushUser(sid, text);
+  THREADS[sid].push({ role:'user', content:text });
+  persistThreads();
+  TRANSCRIPTS[sid].push(aiBubble('<span style="color:var(--text-2)">✦ 正在思考…</span>'));
+  renderChat();
+  try{
+    const reply = await callLLM(sid);
+    TRANSCRIPTS[sid].pop();
+    THREADS[sid].push({ role:'assistant', content:reply });
+    TRANSCRIPTS[sid].push(aiBubble(renderReply(reply)));
+    persistThreads();
+  }catch(err){
+    TRANSCRIPTS[sid].pop();
+    TRANSCRIPTS[sid].push(aiBubble(
+      `⚠️ 调用失败：${esc(String(err && err.message || err))}<br>` +
+      `<span style="font-size:12px;color:var(--text-2)">检查右上角「⚙️ 接入 API」里的密钥 / 接口地址 / 模型名。如果是 CORS 或 Failed to fetch，说明该服务商不允许浏览器直连，需要一个本地代理转发。</span>`
+    ));
+  }
+  renderChat();
+}
+
+/* 候选记忆确认入库（事件委托） */
+document.getElementById('chatScroll').addEventListener('click', e=>{
+  const save = e.target.closest('.mem-save');
+  if(save){
+    try{
+      const p = JSON.parse(decodeURIComponent(save.dataset.payload));
+      const id = 'm' + (++midSeq);
+      MEMSTORE.unshift({
+        id, type: TYPE_STYLE[p.type] ? p.type : '决策', proj: p.project || '未关联',
+        conf:'高', status:'生效中', title:p.title, body:p.body||'',
+        src:'API 会话 · 刚刚', date:'刚刚', day:'刚刚',
+        versions:[{v:1, date:'刚刚', note:'候选记忆经用户确认入库', body:p.body||''}],
+        citedBy:[], isNew:true,
+      });
+      persistMem(); refreshMemViews();
+      const card = save.closest('.mem-card');
+      card.classList.add('saved');
+      card.querySelector('.mc-actions').innerHTML = '<span style="font-size:11.5px;color:#1f8a3d;font-weight:600;">✓ 已入库 · 可在记忆库查看 / 纠正</span>';
+      toast('✅ 记忆已入库并持久化 · 刷新页面后仍在');
+    }catch(err){ toast('解析候选记忆失败'); }
+    return;
+  }
+  const skip = e.target.closest('.mem-skip');
+  if(skip){
+    skip.closest('.mem-card').style.opacity = '.45';
+    skip.closest('.mc-actions').innerHTML = '<span style="font-size:11.5px;color:var(--text-3);">已忽略，未写入</span>';
+  }
+});
+
+/* ---------- API 模式 UI 初始化 ---------- */
+function initApiMode(){
+  window.API_MODE = true;
+  loadPersistedMem();
+  /* 三个标签页变为三个真实对话线程，横幅动态列出当前记忆 */
+  ['s1','s2','s3'].forEach((sid, i)=>{
+    const label = '会话 ' + ['A','B','C'][i];
+    const chips = MEMSTORE.slice(0,5).map(m=>citeHTML(m.id)).join('');
+    const history = THREADS[sid].map(m=> m.role==='user' ? userBubble(m.content) : aiBubble(renderReply(m.content)));
+    TRANSCRIPTS[sid] = [
+      bannerHTML(`<b>${label} · 真实 API 模式</b>：记忆库 ${MEMSTORE.length} 条记忆已注入模型上下文，跨线程、跨页面刷新均有效。引用记忆会自动带出处标记。
+        <div class="bm">${chips}</div>`),
+      ...history,
+    ];
+    const tab = document.querySelector('.stab[data-sid="'+sid+'"]');
+    tab.querySelector('.d').textContent = label;
+    tab.querySelector('.s').textContent = '自由对话';
+    tab.querySelector('.stage').textContent = '真实记忆';
+  });
+  SESS_META.s1.label = '会话 A · API 模式 · 记忆真实写入';
+  SESS_META.s2.label = '会话 B · API 模式 · 跨线程记忆生效';
+  SESS_META.s3.label = '会话 C · API 模式 · 试试纠正一条记忆';
+  $('#suggestBar').style.display = 'none';
+  $('#guide').style.display = 'none';
+  $('#modeBadge').textContent = 'API 模式 · OpenAI 兼容';
+  $('#modeBadge').classList.add('api');
+  $('#gearBtn').textContent = '⚙️ API 设置';
+  $('#tbSub').textContent = SESS_META[state.session].label;
+  renderChat(); refreshMemViews();
+}
+
+/* ---------- 设置弹窗 ---------- */
+const setMask = document.getElementById('settingsMask');
+function openSettings(){
+  document.getElementById('setKey').value = SETTINGS?.apiKey || '';
+  document.getElementById('setBase').value = SETTINGS?.baseURL || '';
+  document.getElementById('setModel').value = SETTINGS?.model || '';
+  document.getElementById('setMsg').textContent = '';
+  setMask.classList.add('show');
+}
+document.getElementById('gearBtn').addEventListener('click', openSettings);
+document.getElementById('setClose').addEventListener('click', ()=>setMask.classList.remove('show'));
+setMask.addEventListener('click', e=>{ if(e.target===setMask) setMask.classList.remove('show'); });
+
+document.getElementById('setSave').addEventListener('click', ()=>{
+  const key = document.getElementById('setKey').value.trim();
+  if(!key){ const m=document.getElementById('setMsg'); m.className='m-msg err'; m.textContent='请填入 API Key'; return; }
+  SETTINGS = {
+    apiKey: key,
+    baseURL: document.getElementById('setBase').value.trim(),
+    model: document.getElementById('setModel').value.trim(),
+  };
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(SETTINGS));
+  setMask.classList.remove('show');
+  if(!window.API_MODE) initApiMode();
+  toast('✅ API 模式已启用 · 三个会话标签现在是三个真实对话线程');
+});
+
+document.getElementById('setClear').addEventListener('click', ()=>{
+  localStorage.removeItem(SETTINGS_KEY);
+  localStorage.removeItem(THREAD_KEY);
+  setMask.classList.remove('show');
+  location.reload();
+});
+
+document.getElementById('setTest').addEventListener('click', async ()=>{
+  const msg = document.getElementById('setMsg');
+  const tmp = {
+    apiKey: document.getElementById('setKey').value.trim(),
+    baseURL: document.getElementById('setBase').value.trim(),
+    model: document.getElementById('setModel').value.trim(),
+  };
+  msg.className='m-msg'; msg.textContent = '测试中…';
+  const old = SETTINGS; SETTINGS = tmp;
+  try{
+    THREADS.s1.push({role:'user', content:'ping，只回复"pong"'});
+    const r = await callLLM('s1');
+    THREADS.s1.pop();
+    msg.className='m-msg ok'; msg.textContent = '✓ 连接成功：' + r.slice(0,60);
+  }catch(err){
+    THREADS.s1.pop();
+    msg.className='m-msg err'; msg.textContent = '✕ ' + String(err && err.message || err).slice(0,140);
+  }
+  SETTINGS = old;
+});
+
+/* ---------- 启动：已配置过密钥则直接进入 API 模式 ---------- */
+if(SETTINGS && SETTINGS.apiKey){ initApiMode(); }
+</script>
+</body>
+</html>

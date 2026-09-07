@@ -1,0 +1,20 @@
+[
+  { "id": "k1", "project": "p1", "folder": "产品文档", "title": "块编辑技术选型",
+    "updated": "2026-09-07", "file": "kb/block-editor.md", "from_memories": ["m01", "m10"] },
+  { "id": "k2", "project": "p1", "folder": "产品文档", "title": "2.0 信息架构",
+    "updated": "2026-09-01", "file": "kb/ia-2.0.md", "from_memories": ["m08"] },
+  { "id": "k3", "project": "p1", "folder": "产品文档", "title": "数据迁移方案 v3",
+    "updated": "2026-09-01", "file": "kb/migration-v3.md", "from_memories": ["m10"] },
+  { "id": "k4", "project": "p1", "folder": "会议纪要", "title": "2.0 排期对齐会纪要",
+    "updated": "2026-09-04", "file": "kb/meeting-0904.md", "from_memories": ["m08"] },
+  { "id": "k5", "project": "p3", "folder": "实验报告", "title": "新手引导 A/B 实验（进行中）",
+    "updated": "2026-09-07", "file": "kb/ab-onboarding.md", "from_memories": ["m02", "m06", "m11"] },
+  { "id": "k6", "project": "p3", "folder": "增长笔记", "title": "留存指标口径手册",
+    "updated": "2026-09-02", "file": "kb/retention-101.md", "from_memories": ["m11"] },
+  { "id": "k7", "project": "p2", "folder": "会议纪要", "title": "官网视觉评审纪要",
+    "updated": "2026-09-06", "file": "kb/design-review-0906.md", "from_memories": ["m03"] },
+  { "id": "k8", "project": "p4", "folder": "方法论", "title": "对话 → 记忆 → 知识 沉淀流程",
+    "updated": "2026-09-04", "file": "kb/memory-pipeline.md", "from_memories": ["m07", "m12"] },
+  { "id": "k9", "project": "p4", "folder": "方法论", "title": "Markdown 语法教程",
+    "updated": "2026-09-01", "file": "kb/markdown-tutorial.md", "from_memories": [] }
+]
