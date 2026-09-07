@@ -179,6 +179,8 @@
   .input-box:focus-within{ border-color:rgba(10,132,255,.5); box-shadow:0 0 0 3px rgba(10,132,255,.15); }
   .input-box textarea{ flex:1; border:none; outline:none; resize:none; font:inherit; font-size:13.5px; line-height:1.4; max-height:100px; }
   .send-btn{ width:30px; height:30px; border-radius:50%; border:none; background:var(--blue); color:#fff; cursor:pointer; font-size:14px; flex-shrink:0; }
+  .send-btn.rec{ background:var(--red) !important; color:#fff !important; animation:recPulse 1.2s infinite; }
+  @keyframes recPulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(255,69,58,.5);} 50%{ box-shadow:0 0 0 6px rgba(255,69,58,0);} }
 
   /* ============ 视图2: 项目进展表 ============ */
   #view-projects{ flex-direction:column; overflow:hidden; }
@@ -289,6 +291,8 @@
   .d-actions button.danger{ color:var(--red); border-color:rgba(255,69,58,.35); }
   .d-edit textarea{ width:100%; min-height:110px; border:1px solid var(--hairline); border-radius:10px; padding:10px; font:inherit; font-size:13px; line-height:1.55; resize:vertical; outline:none; }
   .d-edit textarea:focus{ border-color:rgba(10,132,255,.5); box-shadow:0 0 0 3px rgba(10,132,255,.14); }
+  .diff-del{ background:rgba(255,69,58,.14); text-decoration:line-through; text-decoration-color:rgba(255,69,58,.6); border-radius:2px; }
+  .diff-ins{ background:rgba(48,209,88,.18); border-radius:2px; }
 
   /* ============ 演示导引 & Toast ============ */
   .guide{
@@ -414,7 +418,7 @@
   <aside class="sidebar">
     <div class="traffic"><i class="c"></i><i class="m"></i><i class="z"></i></div>
     <div class="search-wrap">
-      <div class="search"><span>🔍</span><input placeholder="搜索记忆 / 知识 / 项目"></div>
+      <div class="search"><span>🔍</span><input id="searchInput" placeholder="搜索记忆 / 知识 / 项目"></div>
     </div>
 
     <div class="side-label collapsible" data-collapse="navBody">工作台 <span class="chev">▾</span></div>
@@ -468,7 +472,8 @@
       <div class="chat-input-bar">
         <div class="ctx-chips" id="ctxChips"></div>
         <div class="input-box">
-          <textarea id="chatInput" rows="1" placeholder="输入消息…（演示建议：点击下方「建议操作」走完整链路）"></textarea>
+          <textarea id="chatInput" rows="1" placeholder="输入消息，或点 🎤 语音速记…（⌘↩ 发送）"></textarea>
+          <button class="send-btn" id="micBtn" title="语音速记" style="background:rgba(0,0,0,.08);color:var(--text-1);font-size:13px;">🎤</button>
           <button class="send-btn" id="sendBtn">↑</button>
         </div>
       </div>
@@ -516,33 +521,7 @@
         </div>
         <div id="kbTreeBody"></div>
       </div>
-      <div class="kb-doc">
-        <div class="crumb">知识库 / AI笔记 App 2.0 / 产品文档</div>
-        <h1>块编辑技术选型</h1>
-        <div class="meta"><span>✦ 由 6 条记忆自动整理生成</span><span>更新于 9月7日</span><span>版本 v2.1</span></div>
-        <div class="callout">💡 <b>本文摘要：</b>对比了富文本与块编辑两种方案，最终决定 2.0 版本采用块编辑架构，存储层随之改为 JSON Block Tree，旧笔记通过一次性迁移脚本转换。</div>
-        <h2>背景</h2>
-        <p>1.x 的富文本编辑器在移动端存在排版漂移问题，且非结构化的 HTML 内容难以被 AI 功能（摘要、问答、记忆提取）可靠处理。2.0 需要编辑器同时服务好「人写」和「AI 读」。</p>
-        <h2>方案对比</h2>
-        <ul>
-          <li><b>继续富文本（ProseMirror 调优）</b>：成本低，但结构问题无法根治，AI 解析仍需额外清洗层。</li>
-          <li><b>块编辑（Block-based，自研 + 参考 Notion 模型）</b>：内容天然结构化，AI 可按块引用与改写；代价是存储层重写与旧数据迁移。</li>
-        </ul>
-        <h2>决策与依据</h2>
-        <p>选择块编辑。依据来自 9 月 7 日设计评审共识，以及增长实验中「AI 摘要」功能 62% 的高频使用率——结构化内容能直接放大这一核心功能的质量。</p>
-        <h2>风险与跟进</h2>
-        <ul>
-          <li>存储层重写预计延期 5-7 天，已同步至项目进展表（风险等级：中）。</li>
-          <li>旧笔记迁移脚本需在 9 月 20 日前完成灰度验证。</li>
-        </ul>
-        <div class="backlink">
-          <div style="font-size:12px;color:var(--text-2);margin-bottom:8px;">🔗 来源记忆（6）</div>
-          <span class="bl">🧠 编辑器改用块编辑方案</span>
-          <span class="bl">🧠 AI 摘要使用率 62%</span>
-          <span class="bl">🧠 移动端排版漂移问题清单</span>
-          <span class="bl">🧠 存储层重写排期评估</span>
-        </div>
-      </div>
+      <div class="kb-doc" id="kbDoc"></div>
     </section>
 
     <!-- ========== 视图5：个人主页与设置 ========== -->
@@ -973,6 +952,14 @@ function renderChat(){
   renderCtxChips();
 }
 function renderCtxChips(){
+  if(window.API_MODE){
+    const last = (THREADS[state.session]||[]).filter(m=>m.role==='user').pop();
+    const n = last ? recallMemories(last.content, 8).length : 0;
+    $('#ctxChips').innerHTML =
+      `<span class="chip">🧠 本条消息召回 ${n} 条相关记忆 / 全库 ${MEMSTORE.length} 条</span>` +
+      `<span class="chip">⚡ API 模式 · 流式</span>`;
+    return;
+  }
   const ids = [state.memCreated.mUser, state.memCreated.mBlock, 'm-pre1', 'm-pre2'];
   $('#ctxChips').innerHTML =
     `<span class="chip">📎 当前项目：AI笔记 App 2.0</span>` +
@@ -1033,6 +1020,23 @@ function closeDrawer(){
 }
 $('#drawerMask').addEventListener('click', closeDrawer);
 
+/* 字符级 LCS diff：旧版本 → 新版本的改动高亮 */
+function diffText(a, b){
+  const n = a.length, m = b.length;
+  const dp = Array.from({length:n+1}, ()=>new Uint16Array(m+1));
+  for(let i=n-1;i>=0;i--) for(let j=m-1;j>=0;j--)
+    dp[i][j] = a[i]===b[j] ? dp[i+1][j+1]+1 : Math.max(dp[i+1][j], dp[i][j+1]);
+  let out='', i=0, j=0;
+  while(i<n && j<m){
+    if(a[i]===b[j]){ out+=esc(a[i]); i++; j++; }
+    else if(dp[i+1][j] >= dp[i][j+1]){ out+='<span class="diff-del">'+esc(a[i])+'</span>'; i++; }
+    else { out+='<span class="diff-ins">'+esc(b[j])+'</span>'; j++; }
+  }
+  while(i<n){ out+='<span class="diff-del">'+esc(a[i])+'</span>'; i++; }
+  while(j<m){ out+='<span class="diff-ins">'+esc(b[j])+'</span>'; j++; }
+  return out;
+}
+
 function renderDrawer(){
   const m = findMem(drawerMemId); if(!m){ closeDrawer(); return; }
   const ts = TYPE_STYLE[m.type] || ['rgba(0,0,0,.06)','var(--text-2)'];
@@ -1052,6 +1056,11 @@ function renderDrawer(){
        <div style="font-size:11px;color:var(--text-2);margin-top:6px;">保存将生成新版本（v${m.versions.length+1}），当前版本留痕为历史版本 —— 纠正不是覆盖。</div></div>`
     : `<div class="d-text">${m.body}</div>`;
 
+  const diffBlock = (!drawerEditing && m.versions.length>1)
+    ? `<div class="d-sec"><div class="d-label">相对上一版（v${m.versions.length-1}）的改动 · <span style="color:var(--red)">删除</span> / <span style="color:#1f8a3d">新增</span></div>
+       <div class="d-text" style="background:rgba(0,0,0,.03);border-radius:8px;padding:8px 10px;">${diffText(m.versions[m.versions.length-2].body, m.body)}</div></div>`
+    : '';
+
   $('#drawer').innerHTML = `
     <div class="d-head"><h2>${m.title}</h2><button class="d-close" id="dClose">✕</button></div>
     <div class="d-body">
@@ -1062,6 +1071,7 @@ function renderDrawer(){
         ${m.isNew?'<span class="newtag">本次演示新增</span>':''}
       </div>
       <div class="d-sec"><div class="d-label">内容（当前版本）</div>${bodyHTML}</div>
+      ${diffBlock}
       <div class="d-sec"><div class="d-label">溯源信息</div>
         <div class="d-kv"><span class="k">出处</span><span class="v">${m.src}</span></div>
         <div class="d-kv"><span class="k">记录时间</span><span class="v">${m.versions[0].date}</span></div>
@@ -1121,7 +1131,8 @@ function memCardHTML(m){
   </div>`;
 }
 function renderMemories(){
-  const list = MEMSTORE.filter(m=> memFilter==='all' || m.type===memFilter);
+  const q = (window.memQuery||'').trim();
+  const list = MEMSTORE.filter(m=> (memFilter==='all' || m.type===memFilter) && (!q || (m.title+m.body+m.proj).includes(q)));
   const groups = {};
   const key = m => memGroup==='time' ? m.day : m.proj;
   list.forEach(m=>{ (groups[key(m)] ||= []).push(m); });
@@ -1129,7 +1140,7 @@ function renderMemories(){
     `<div class="mem-group-label">🕐 ${g}<span class="g-cnt">${items.length} 条</span></div>
      <div class="mem-grid">${items.map(memCardHTML).join('')}</div>`
   ).join('') || '<div style="color:var(--text-3);padding:20px;">该分类下暂无记忆</div>';
-  $('#memCount').textContent = `共 ${list.length} 条 · 点击卡片查看出处 / 版本 / 被引用`;
+  $('#memCount').textContent = `共 ${list.length} 条${q ? ' · 搜索："'+q+'"' : ''} · 点击卡片查看出处 / 版本 / 被引用`;
 }
 document.querySelectorAll('#memTabs button').forEach(b=>b.addEventListener('click', ()=>{
   document.querySelectorAll('#memTabs button').forEach(x=>x.classList.remove('active'));
@@ -1161,35 +1172,73 @@ function renderProjects(){
 }
 
 /* =====================================================================
- * 知识库树（保持原有演示）
+ * 知识库：数据驱动（KB_DOCS），文档与记忆双向可溯源
  * ===================================================================== */
-const KB_BY_PROJECT = [
-  { label:'AI笔记 App 2.0', nodes:[
-    { name:'📁 产品文档', cnt:'8' }, { name:'📄 块编辑技术选型', child:1, sel:1 },
-    { name:'📄 2.0 信息架构', child:1 }, { name:'📄 数据迁移方案 v3', child:1 },
-    { name:'📁 会议纪要', cnt:'12' }, { name:'📁 决策记录', cnt:'9' } ]},
-  { label:'用户增长实验', nodes:[ { name:'📁 实验报告', cnt:'6' }, { name:'📁 增长笔记', cnt:'11' } ]},
-  { label:'团队知识沉淀', nodes:[ { name:'📁 方法论', cnt:'7' } ]},
+const KB_DOCS = [
+  { id:'k1', title:'块编辑技术选型', proj:'AI笔记 App 2.0', folder:'产品文档', updated:'9月7日', ver:'v2.1',
+    summary:'对比了富文本与块编辑两种方案，最终决定 2.0 版本采用块编辑架构，存储层改为 JSON Block Tree，旧笔记通过一次性迁移脚本转换。',
+    body:`<h2>背景</h2><p>1.x 的富文本编辑器在移动端存在排版漂移问题，且非结构化的 HTML 内容难以被 AI 功能（摘要、问答、记忆提取）可靠处理。2.0 需要编辑器同时服务好「人写」和「AI 读」。</p>
+      <h2>方案对比</h2><ul><li><b>继续富文本（ProseMirror 调优）</b>：成本低，但结构问题无法根治，AI 解析仍需额外清洗层。</li><li><b>块编辑（自研 + 参考 Notion 模型）</b>：内容天然结构化，AI 可按块引用与改写；代价是存储层重写与旧数据迁移。</li></ul>
+      <h2>决策与依据</h2><p>选择块编辑。依据来自 9 月 7 日设计评审共识，以及增长实验中「AI 摘要」62% 的高频使用率——结构化内容能直接放大这一核心功能的质量。</p>
+      <h2>风险与跟进</h2><ul><li>存储层重写预计延期 5-7 天，已同步至项目进展表（风险等级：中）。</li><li>旧笔记迁移脚本需在 9 月 20 日前完成灰度验证。</li></ul>`,
+    srcs:['m-pre1','m-pre2'] },
+  { id:'k2', title:'新手引导 A/B 实验（进行中）', proj:'用户增长实验', folder:'实验报告', updated:'9月7日', ver:'v1.0',
+    summary:'B 组渐进式引导次日留存 41.2%（+4.4pp），样本量 2,140，预计 9月12日 达显著性。',
+    body:`<h2>实验设计</h2><p>A 组一次性全量引导 vs B 组渐进式引导，观测次日留存与 7 日留存。</p><h2>中期数据</h2><p>B 组次日留存 41.2%，对照组 36.8%，提升 4.4pp；样本量 2,140，尚未达显著性，预计 9 月 12 日出结论。</p>`,
+    srcs:['m-ab'] },
+  { id:'k3', title:'官网视觉评审纪要', proj:'官网改版', folder:'会议纪要', updated:'9月6日', ver:'v1.0',
+    summary:'首页 Hero 采用产品实景截图；品牌色保持靛蓝；动效预算 300ms。遗留：3 张案例素材待客户回传。',
+    body:`<h2>结论</h2><ul><li>首页 Hero：产品实景截图而非插画。</li><li>品牌色：保持靛蓝。</li><li>动效预算：300ms 内。</li></ul><h2>遗留</h2><p>3 张客户案例素材未回传，存在延期风险（关联待办记忆）。</p>`,
+    srcs:['m-gw','m-td'] },
+  { id:'k4', title:'对话 → 记忆 → 知识 沉淀流程', proj:'团队知识沉淀', folder:'方法论', updated:'9月4日', ver:'v1.2',
+    summary:'每条记忆必须挂项目 + 类型标签；知识库文档由记忆沉淀生成，保持单向流动。',
+    body:`<h2>原则</h2><p>对话是矿，记忆是提炼物，知识是出版物。方向单向：对话 → 记忆 → 知识。</p><h2>归档规则</h2><p>记忆按「项目 + 标签」双维度归档，放弃纯文件夹树。</p>`,
+    srcs:['m-km'] },
+  { id:'k5', title:'2.0 信息架构', proj:'AI笔记 App 2.0', folder:'产品文档', updated:'9月1日', ver:'v1.0',
+    summary:'2.0 的信息架构：编辑器、记忆库、知识库三层，底部导航收敛为四个入口。',
+    body:`<h2>三层结构</h2><p>编辑器（写）→ 记忆库（存）→ 知识库（用）。</p>`,
+    srcs:[] },
 ];
-const KB_BY_TIME = [
-  { label:'9月7日', nodes:[ { name:'📄 块编辑技术选型', sel:1, meta:'AI笔记 2.0' }, { name:'📄 A/B 实验数据快报', meta:'增长实验' } ]},
-  { label:'9月6日', nodes:[ { name:'📄 官网视觉评审纪要', meta:'官网改版' }, { name:'📄 记忆串联功能构想', meta:'未关联' } ]},
-  { label:'9月4日', nodes:[ { name:'📄 记忆归档双维度设计', meta:'知识沉淀' } ]},
-  { label:'9月1日', nodes:[ { name:'📄 2.0 信息架构', meta:'AI笔记 2.0' }, { name:'📄 数据迁移方案 v3', meta:'AI笔记 2.0' } ]},
-];
+let kbMode = 'project', currentDoc = 'k1';
+function docAgeDays(d){
+  const mm = /^(\d+)月(\d+)日$/.exec(d.updated || '');
+  if(!mm) return 0;
+  const now = new Date();
+  return Math.max(0, Math.floor((now - new Date(now.getFullYear(), mm[1]-1, mm[2])) / 86400000));
+}
 function renderKbTree(mode){
-  const data = mode==='project' ? KB_BY_PROJECT : KB_BY_TIME;
-  $('#kbTreeBody').innerHTML = data.map(g=>
-    `<div class="side-label" style="padding:10px 10px 6px;">${g.label}</div>` +
-    g.nodes.map(n=>
-      `<div class="kb-node${n.child?' child':''}${n.sel?' sel':''}">${n.name}${n.cnt?`<span class="cnt">${n.cnt}</span>`:''}${n.meta?`<span class="cnt">${n.meta}</span>`:''}</div>`
-    ).join('')
+  kbMode = mode;
+  const groups = {};
+  KB_DOCS.forEach(d=>{ (groups[mode==='project' ? d.proj : d.updated] ||= []).push(d); });
+  $('#kbTreeBody').innerHTML = Object.entries(groups).map(([g, docs])=>
+    `<div class="side-label" style="padding:10px 10px 6px;">${g}</div>` +
+    docs.map(d=>`<div class="kb-node child${d.id===currentDoc?' sel':''}" data-doc="${d.id}">📄 ${d.title}<span class="cnt">${mode==='project' ? d.updated : d.proj}</span></div>`).join('')
   ).join('');
   document.querySelectorAll('#kbTreeBody .kb-node').forEach(n=>n.addEventListener('click', ()=>{
-    document.querySelectorAll('#kbTreeBody .kb-node').forEach(x=>x.classList.remove('sel'));
-    n.classList.add('sel');
+    currentDoc = n.dataset.doc; renderKbTree(kbMode); renderKbDoc();
   }));
 }
+function renderKbDoc(){
+  const d = KB_DOCS.find(x=>x.id===currentDoc); if(!d) return;
+  const srcIds = [...d.srcs];
+  if(d.id==='k1' && state.memCreated.mBlock) srcIds.push(state.memCreated.mBlock);
+  const srcChips = srcIds.map(id=>findMem(id) ? citeHTML(id) : '').join(' ');
+  const age = docAgeDays(d);
+  $('#kbDoc').innerHTML = `
+    <div class="crumb">知识库 / ${d.proj} / ${d.folder}</div>
+    <h1>${d.title}</h1>
+    <div class="meta"><span>✦ 由 ${srcIds.length} 条记忆自动整理生成</span><span>更新于 ${d.updated}${age>=7 ? ' · <span style="color:var(--orange);font-weight:600;">已 '+age+' 天未更新</span>' : ''}</span><span>版本 ${d.ver}</span></div>
+    <div class="callout">💡 <b>本文摘要：</b>${d.summary}</div>
+    ${d.body}
+    <div class="backlink">
+      <div style="font-size:12px;color:var(--text-2);margin-bottom:8px;">🔗 来源记忆（${srcIds.length}）—— 点击可溯源到记忆卡片</div>
+      ${srcChips || '<span style="font-size:12px;color:var(--text-3);">（无关联记忆）</span>'}
+    </div>`;
+}
+document.getElementById('kbDoc').addEventListener('click', e=>{
+  const c = e.target.closest('.cite');
+  if(c && c.dataset.mid) openDrawer(c.dataset.mid);
+});
 document.querySelectorAll('#kbGroupSeg button').forEach(b=>b.addEventListener('click', ()=>{
   document.querySelectorAll('#kbGroupSeg button').forEach(x=>x.classList.remove('active'));
   b.classList.add('active'); renderKbTree(b.dataset.group);
@@ -1237,7 +1286,7 @@ $('#guideToggle').addEventListener('click', ()=>{
 
 /* ---------- 启动 ---------- */
 initTranscripts();
-renderChat(); renderSuggestions(); renderMemories(); renderProjects(); renderKbTree('project'); updateCounts(); refreshGuide();
+renderChat(); renderSuggestions(); renderMemories(); renderProjects(); renderKbTree('project'); renderKbDoc(); updateCounts(); refreshGuide();
 </script>
 
 <script>
@@ -1260,6 +1309,7 @@ try{
 
 function persistThreads(){ try{ localStorage.setItem(THREAD_KEY, JSON.stringify(THREADS)); }catch(e){} }
 function persistMem(){ if(window.API_MODE){ try{ localStorage.setItem(MEM_KEY, JSON.stringify(MEMSTORE)); }catch(e){} } }
+function fmtToday(){ const d = new Date(); return (d.getMonth()+1) + '月' + d.getDate() + '日'; }
 function loadPersistedMem(){
   try{
     const arr = JSON.parse(localStorage.getItem(MEM_KEY) || 'null');
@@ -1272,9 +1322,33 @@ function loadPersistedMem(){
   });
 }
 
-/* ---------- 系统提示词：记忆库 + 引用/写入协议 ---------- */
-function buildSystem(){
-  const mems = MEMSTORE.map(m=>
+/* ---------- 记忆召回：本地相关性评分，只注入与当前消息相关的记忆 ---------- */
+function tokenize(s){
+  const t = String(s||'').toLowerCase();
+  const words = t.match(/[a-z0-9]+/g) || [];
+  const cjk = t.replace(/[a-z0-9\s\p{P}\p{S}]/gu, '');
+  const grams = [];
+  for(let i=0;i<cjk.length-1;i++) grams.push(cjk.slice(i,i+2));
+  return words.concat(grams);
+}
+function recallMemories(query, k=8){
+  if(!query || !query.trim()){
+    return [...MEMSTORE].sort((a,b)=>memTs(b)-memTs(a)).slice(0,k);
+  }
+  const q = tokenize(query);
+  return MEMSTORE.map(m=>{
+    const text = (m.title + ' ' + m.body + ' ' + m.proj).toLowerCase();
+    let s = 0;
+    for(const t of q){ if(text.includes(t)) s += t.length >= 2 ? 2 : 1; }
+    if(m.isNew) s += 1;
+    return [s, m];
+  }).filter(x=>x[0]>0).sort((a,b)=>b[0]-a[0]).slice(0,k).map(x=>x[1]);
+}
+
+/* ---------- 系统提示词：召回的记忆 + 引用/写入协议 ---------- */
+function buildSystem(query){
+  const recalled = recallMemories(query, 8);
+  const mems = recalled.map(m=>
     `[${m.id}]（${m.type}｜项目:${m.proj}｜${m.date}｜v${m.versions.length}｜${m.status}｜出处:${m.src}）${m.title}：${m.body}`
   ).join('\n');
   const projs = PROJECTS.map(p=>`${p.name}（${p.pill[1]} ${p.pct}%）`).join('、');
@@ -1293,23 +1367,45 @@ function buildSystem(){
 
 当前项目列表：${projs}。
 
-长期记忆库（共 ${MEMSTORE.length} 条）：
-${mems || '（空）'}
+与当前消息最相关的长期记忆（召回 ${recalled.length} 条 / 全库共 ${MEMSTORE.length} 条）：
+${mems || '（本次未召回到相关记忆）'}
+
+如果回答需要用到上方未列出的记忆主题，请明确说明"记忆库中可能还有关于 X 的记忆，我这边未加载"，不要编造。
 
 用中文回答，简洁、结论先行。`;
 }
 
-/* ---------- API 调用（OpenAI 兼容格式） ---------- */
-async function callLLM(sid){
-  const sys = buildSystem();
+/* ---------- API 调用（OpenAI 兼容格式，支持流式） ---------- */
+async function callLLM(sid, onChunk){
+  const sys = buildSystem(msgs[msgs.length-1] ? msgs[msgs.length-1].content : '');
   const msgs = THREADS[sid];
   const url = (SETTINGS.baseURL || 'https://api.openai.com/v1') + '/chat/completions';
   const r = await fetch(url, {
     method:'POST',
     headers:{ 'content-type':'application/json', 'authorization':'Bearer ' + SETTINGS.apiKey },
-    body: JSON.stringify({ model: SETTINGS.model || 'gpt-4o-mini', messages: [{role:'system', content:sys}, ...msgs] }),
+    body: JSON.stringify({ model: SETTINGS.model || 'gpt-4o-mini', stream: !!onChunk, messages: [{role:'system', content:sys}, ...msgs] }),
   });
   if(!r.ok) throw new Error('HTTP ' + r.status + ' · ' + (await r.text()).slice(0,200));
+  if(onChunk && r.body){
+    const reader = r.body.getReader(); const dec = new TextDecoder();
+    let buf = '', full = '';
+    for(;;){
+      const { done, value } = await reader.read(); if(done) break;
+      buf += dec.decode(value, { stream:true });
+      const lines = buf.split('\n'); buf = lines.pop();
+      for(const line of lines){
+        const t = line.trim(); if(!t.startsWith('data:')) continue;
+        const d = t.slice(5).trim(); if(d === '[DONE]') continue;
+        try{
+          const j = JSON.parse(d);
+          const delta = j.choices?.[0]?.delta?.content || '';
+          if(delta){ full += delta; onChunk(full); }
+        }catch(e){}
+      }
+    }
+    if(full) return full;
+    throw new Error('流式响应为空');
+  }
   const data = await r.json();
   return data.choices?.[0]?.message?.content || '（空回复）';
 }
@@ -1351,18 +1447,20 @@ async function apiSend(text){
   persistThreads();
   TRANSCRIPTS[sid].push(aiBubble('<span style="color:var(--text-2)">✦ 正在思考…</span>'));
   renderChat();
+  const bi = TRANSCRIPTS[sid].length - 1;
   try{
-    const reply = await callLLM(sid);
-    TRANSCRIPTS[sid].pop();
+    const reply = await callLLM(sid, full=>{
+      TRANSCRIPTS[sid][bi] = aiBubble(esc(full).replace(/\n/g,'<br>') + '<span style="opacity:.5">▍</span>');
+      renderChat();
+    });
     THREADS[sid].push({ role:'assistant', content:reply });
-    TRANSCRIPTS[sid].push(aiBubble(renderReply(reply)));
+    TRANSCRIPTS[sid][bi] = aiBubble(renderReply(reply));
     persistThreads();
   }catch(err){
-    TRANSCRIPTS[sid].pop();
-    TRANSCRIPTS[sid].push(aiBubble(
+    TRANSCRIPTS[sid][bi] = aiBubble(
       `⚠️ 调用失败：${esc(String(err && err.message || err))}<br>` +
       `<span style="font-size:12px;color:var(--text-2)">检查「个人主页」里的密钥 / 接口地址 / 模型名。如果是 CORS 或 Failed to fetch，说明该服务商不允许浏览器直连，需要一个本地代理转发。</span>`
-    ));
+    );
   }
   renderChat();
 }
@@ -1377,8 +1475,8 @@ document.getElementById('chatScroll').addEventListener('click', e=>{
       MEMSTORE.unshift({
         id, type: TYPE_STYLE[p.type] ? p.type : '决策', proj: p.project || '未关联',
         conf:'高', status:'生效中', title:p.title, body:p.body||'',
-        src:'API 会话 · 刚刚', date:'刚刚', day:'刚刚',
-        versions:[{v:1, date:'刚刚', note:'候选记忆经用户确认入库', body:p.body||''}],
+        src:'API 会话 · 刚刚', date:fmtToday(), day:fmtToday(), ts:Date.now(),
+        versions:[{v:1, date:fmtToday(), note:'候选记忆经用户确认入库', body:p.body||''}],
         citedBy:[], isNew:true,
       });
       persistMem(); refreshMemViews();
@@ -1502,14 +1600,14 @@ switchView = function(v){ _origSwitchView(v); CURRENT_VIEW = v; updatePetDot(); 
 
 const petEl = document.getElementById('pet'), petBubble = document.getElementById('petBubble');
 let petBubbleOpen = false;
-const DEMO_TODAY = new Date(2026, 8, 20);  // 演示时间基准：9月20日
-
-function memAgeDays(m){
+function memTs(m){
+  if(m.ts) return m.ts;
   const mm = /^(\d+)月(\d+)日$/.exec(m.date || '');
-  if(!mm) return 0;
-  return Math.round((DEMO_TODAY - new Date(2026, mm[1]-1, mm[2])) / 86400000);
+  if(mm){ const now = new Date(); return new Date(now.getFullYear(), mm[1]-1, mm[2]).getTime(); }
+  return Date.now();
 }
-function expiringMemories(){ return MEMSTORE.filter(m=>memAgeDays(m) >= 14 && m.status !== '已纠正'); }
+function memAgeDays(m){ return Math.max(0, Math.floor((Date.now() - memTs(m)) / 86400000)); }
+function expiringMemories(){ return MEMSTORE.filter(m=>memAgeDays(m) >= 7 && m.status !== '已纠正'); }
 
 function petViewContent(){
   switch(CURRENT_VIEW){
@@ -1521,10 +1619,13 @@ function petViewContent(){
     case 'memory':{
       const exp = expiringMemories();
       if(!exp.length) return {icon:'🧠', title:'记忆库', text:'所有记忆都很新鲜，暂无临期记忆。👍', items:[]};
-      return {icon:'🧠', title:'记忆库 · 临期提醒', text:`<b>${exp.length}</b> 条记忆已超过 14 天未验证，可能过时，建议点开复核：`, items:exp.map(m=>({mid:m.id, text:'⏳ '+m.title+' · '+m.date+'（'+memAgeDays(m)+' 天前）'}))};
+      return {icon:'🧠', title:'记忆库 · 临期提醒', text:`<b>${exp.length}</b> 条记忆已超过 7 天未验证，可能过时，建议点开复核：`, items:exp.map(m=>({mid:m.id, text:'⏳ '+m.title+' · '+m.date+'（'+memAgeDays(m)+' 天前）'}))};
     }
-    case 'kb':
-      return {icon:'📚', title:'知识库 · 更新提醒', text:'《块编辑技术选型》由 6 条记忆生成，9月7日后未更新；「A/B 实验数据快报」依赖的实验 9月12日已出结论 —— 建议复核并整理更新，别让文档跑赢记忆。', items:[]};
+    case 'kb':{
+      const stale = KB_DOCS.filter(d=>docAgeDays(d) >= 7);
+      if(!stale.length) return {icon:'📚', title:'知识库', text:'所有文档都很新鲜，无需更新。👍', items:[]};
+      return {icon:'📚', title:'知识库 · 更新提醒', text:`<b>${stale.length}</b> 篇文档超过 7 天未更新，其依赖的记忆可能已有新进展，建议点开复核：`, items:stale.map(d=>({docId:d.id, text:'📄 '+d.title+' · 更新于 '+d.updated+'（'+docAgeDays(d)+' 天前）'}))};
+    }
     case 'projects':{
       const risks = PROJECTS.filter(p=>p.pill[0]==='risk');
       return {icon:'📊', title:'项目进展', text:`<b>${risks.length}</b> 个项目存在风险：${risks.map(p=>p.name).join('、')}。「官网改版」的素材待办已过期，建议优先跟进。`, items:[]};
@@ -1539,7 +1640,7 @@ function renderPetBubble(){
   const c = petViewContent();
   petBubble.innerHTML =
     `<div class="pb-head">${c.icon} ${c.title}<span style="margin-left:auto;font-size:10px;color:var(--text-3);font-weight:500;">小默</span></div>
-     <div class="pb-body">${c.text}${c.items.length?'<div style="margin-top:8px;">'+c.items.map(i=>`<div class="pb-item" data-mid="${i.mid}">${i.text}</div>`).join('')+'</div>':''}</div>
+     <div class="pb-body">${c.text}${c.items.length?'<div style="margin-top:8px;">'+c.items.map(i=>`<div class="pb-item" ${i.docId?`data-doc="${i.docId}"`:`data-mid="${i.mid}"`}>${i.text}</div>`).join('')+'</div>':''}</div>
      <div class="pb-foot"><button class="primary" id="pbQuiz">🎮 记忆问答</button><button id="pbClose">知道了</button></div>`;
 }
 petEl.addEventListener('click', ()=>{
@@ -1552,6 +1653,7 @@ petBubble.addEventListener('click', e=>{
   if(e.target.id==='pbQuiz'){ petBubbleOpen=false; petBubble.classList.remove('show'); startQuiz(); }
   const it = e.target.closest('.pb-item');
   if(it && it.dataset.mid){ petBubbleOpen=false; petBubble.classList.remove('show'); openDrawer(it.dataset.mid); }
+  if(it && it.dataset.doc){ petBubbleOpen=false; petBubble.classList.remove('show'); switchView('kb'); currentDoc = it.dataset.doc; renderKbTree(kbMode); renderKbDoc(); }
 });
 window.petCelebrate = function(){
   petEl.classList.remove('celebrate'); void petEl.offsetWidth; petEl.classList.add('celebrate');
@@ -1631,6 +1733,38 @@ document.getElementById('quizBody').addEventListener('click', e=>{
 });
 
 updatePetDot();
+
+/* ---------- 侧边栏搜索：实时过滤记忆库 ---------- */
+document.getElementById('searchInput').addEventListener('input', e=>{
+  window.memQuery = e.target.value.trim();
+  if(window.memQuery && CURRENT_VIEW!=='memory') switchView('memory');
+  renderMemories();
+});
+
+/* ---------- 语音速记（Web Speech API，Chrome/Edge） ---------- */
+(function(){
+  const btn = document.getElementById('micBtn');
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ btn.title = '当前浏览器不支持语音识别（请用 Chrome / Edge）'; btn.style.opacity = .4; }
+  let rec = null, on = false;
+  btn.addEventListener('click', ()=>{
+    if(!SR){ toast('当前浏览器不支持语音识别，请用 Chrome / Edge 打开'); return; }
+    if(on){ rec.stop(); return; }
+    rec = new SR();
+    rec.lang = 'zh-CN'; rec.continuous = true; rec.interimResults = true;
+    const input = document.getElementById('chatInput');
+    const base = input.value;
+    rec.onresult = e=>{
+      let s = '';
+      for(const r of e.results) s += r[0].transcript;
+      input.value = (base ? base + ' ' : '') + s;
+    };
+    rec.onend = ()=>{ on = false; btn.classList.remove('rec'); };
+    rec.onerror = ev=>{ on = false; btn.classList.remove('rec'); toast('语音识别失败：' + ev.error); };
+    try{ rec.start(); on = true; btn.classList.add('rec'); toast('🎤 录音中，说完再点一次结束'); }
+    catch(err){ toast('麦克风启动失败：' + err.message); }
+  });
+})();
 </script>
 </body>
 </html>
