@@ -336,6 +336,72 @@
   .modal .m-msg.err{ color:var(--red); }
   .modal .m-foot{ display:flex; gap:8px; padding:12px 18px 16px; border-top:1px solid var(--hairline); flex-wrap:wrap; }
 
+  /* ============ 折叠分区 ============ */
+  .side-label.collapsible{ cursor:pointer; display:flex; align-items:center; user-select:none; }
+  .side-label.collapsible:hover{ color:var(--text-2); }
+  .side-label.collapsible .chev{ margin-left:auto; font-size:9px; transition:transform .15s; }
+  .side-label.collapsible.collapsed .chev{ transform:rotate(-90deg); }
+  .collapse-body.collapsed{ display:none; }
+
+  /* ============ 个人主页 / 设置 ============ */
+  #view-settings{ flex-direction:column; overflow-y:auto; }
+  .set-wrap{ padding:22px 26px; max-width:640px; width:100%; display:flex; flex-direction:column; gap:14px; }
+  .set-card{ background:#fff; border:1px solid var(--hairline); border-radius:14px; padding:16px 18px; }
+  .set-card h3{ font-size:13.5px; font-weight:700; margin-bottom:10px; }
+  .set-card label{ font-size:12px; font-weight:600; color:var(--text-2); display:flex; flex-direction:column; gap:4px; margin-bottom:10px; }
+  .set-card input[type=text], .set-card input[type=password], .set-card input:not([type]){
+    font:inherit; font-size:13px; padding:8px 10px; border:1px solid var(--hairline); border-radius:9px; outline:none;
+  }
+  .set-card input:focus{ border-color:rgba(10,132,255,.5); box-shadow:0 0 0 3px rgba(10,132,255,.13); }
+  .profile-card{ display:flex; align-items:center; gap:12px; }
+  .set-hint{ font-size:11.5px; color:var(--text-3); margin-top:8px; line-height:1.6; }
+  .switch-row{ flex-direction:row !important; align-items:center; gap:8px !important; font-weight:500 !important; color:var(--text-1) !important; }
+
+  /* ============ 桌面宠物「小默」 ============ */
+  .pet{ position:absolute; right:26px; bottom:182px; z-index:65; width:64px; height:64px; cursor:pointer; transition:transform .2s; }
+  body.api .pet{ bottom:26px; }
+  .pet:hover{ transform:scale(1.08); }
+  .pet .p-body{
+    width:64px; height:58px; border-radius:46% 46% 42% 42%; position:relative;
+    background:linear-gradient(160deg,#7ec8ff,#4f8ef7 60%,#7a5af8);
+    box-shadow:0 6px 16px rgba(50,80,200,.35), inset 0 -6px 10px rgba(0,0,0,.12);
+    animation:petBob 3s ease-in-out infinite;
+  }
+  .pet .p-eye{ position:absolute; top:20px; width:9px; height:11px; background:#fff; border-radius:50%; animation:petBlink 4.5s infinite; }
+  .pet .p-eye::after{ content:''; position:absolute; left:2.5px; top:3px; width:4px; height:5px; border-radius:50%; background:#1d2b53; }
+  .pet .p-eye.l{ left:16px; } .pet .p-eye.r{ right:16px; }
+  .pet .p-cheek{ position:absolute; top:32px; width:8px; height:5px; border-radius:50%; background:rgba(255,120,150,.5); }
+  .pet .p-cheek.l{ left:9px; } .pet .p-cheek.r{ right:9px; }
+  .pet .p-mouth{ position:absolute; left:50%; top:33px; width:10px; height:5px; margin-left:-5px; border-bottom:2px solid rgba(255,255,255,.9); border-radius:0 0 8px 8px; }
+  .pet .p-leaf{ position:absolute; left:50%; top:-9px; width:14px; height:12px; margin-left:-7px; background:linear-gradient(135deg,#30D158,#1f9d4d); border-radius:80% 10% 80% 10%; transform:rotate(-12deg); }
+  @keyframes petBob{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+  @keyframes petBlink{ 0%,92%,100%{transform:scaleY(1)} 95%{transform:scaleY(.1)} }
+  .pet.celebrate .p-body{ animation:petJump .5s ease; }
+  @keyframes petJump{ 0%{transform:translateY(0)} 40%{transform:translateY(-14px) scale(1.06)} 100%{transform:translateY(0)} }
+  .pet .p-dot{ position:absolute; right:-2px; top:-2px; min-width:15px; height:15px; background:var(--red); border-radius:9px; border:2px solid #fff; font-size:9.5px; font-weight:700; color:#fff; display:flex; align-items:center; justify-content:center; padding:0 3px; }
+
+  .pet-bubble{
+    position:absolute; right:16px; bottom:252px; z-index:66; width:284px;
+    background:#fff; border-radius:14px; box-shadow:0 12px 40px rgba(0,0,0,.22);
+    border:1px solid var(--hairline); display:none; overflow:hidden;
+  }
+  body.api .pet-bubble{ bottom:100px; }
+  .pet-bubble.show{ display:block; animation:slideIn .18s ease-out; }
+  .pet-bubble .pb-head{ padding:10px 12px; background:linear-gradient(135deg,#eef5ff,#f3efff); font-size:12px; font-weight:700; display:flex; align-items:center; gap:6px; }
+  .pet-bubble .pb-body{ padding:10px 12px; font-size:12.5px; line-height:1.6; max-height:220px; overflow-y:auto; }
+  .pb-item{ padding:6px 8px; border-radius:8px; background:rgba(0,0,0,.035); margin-bottom:6px; cursor:pointer; font-size:12px; line-height:1.5; }
+  .pb-item:hover{ background:rgba(10,132,255,.1); }
+  .pet-bubble .pb-foot{ padding:8px 12px; border-top:1px solid var(--hairline); display:flex; gap:6px; }
+  .pet-bubble .pb-foot button{ flex:1; font:inherit; font-size:11.5px; padding:6px 0; border-radius:8px; border:1px solid var(--hairline); background:#fff; cursor:pointer; }
+  .pet-bubble .pb-foot button.primary{ background:var(--blue); color:#fff; border-color:transparent; font-weight:600; }
+
+  /* ============ 记忆问答 ============ */
+  .quiz-opt{ display:block; width:100%; text-align:left; font:inherit; font-size:12.5px; line-height:1.55; padding:9px 12px; margin-bottom:8px; border:1px solid var(--hairline); border-radius:10px; background:#fff; cursor:pointer; }
+  .quiz-opt:hover:not(:disabled){ border-color:rgba(10,132,255,.4); }
+  .quiz-opt.right{ border-color:var(--green); background:rgba(48,209,88,.1); }
+  .quiz-opt.wrong{ border-color:var(--red); background:rgba(255,69,58,.08); }
+  .quiz-opt:disabled{ cursor:default; }
+
   ::-webkit-scrollbar{ width:8px; height:8px; }
   ::-webkit-scrollbar-thumb{ background:rgba(0,0,0,.18); border-radius:4px; border:2px solid transparent; background-clip:content-box; }
   ::-webkit-scrollbar-thumb:hover{ background:rgba(0,0,0,.3); background-clip:content-box; }
@@ -479,6 +545,41 @@
       </div>
     </section>
 
+    <!-- ========== 视图5：个人主页与设置 ========== -->
+    <section class="view" id="view-settings">
+      <div class="set-wrap">
+        <div class="set-card profile-card">
+          <div class="avatar" style="width:44px;height:44px;font-size:18px;">默</div>
+          <div style="flex:1;">
+            <div style="font-size:15px;font-weight:700;">默 <span class="ptag" style="background:rgba(191,90,242,.12);color:var(--purple)">Pro</span></div>
+            <div style="font-size:12px;color:var(--text-2);margin-top:2px;">知识工作者 · 记忆库 <b id="setMemCount">7</b> 条 · 进行中项目 4 个</div>
+          </div>
+          <span class="mode-badge" id="modeBadge2">演示模式</span>
+        </div>
+
+        <div class="set-card">
+          <h3>🔌 接入真实大模型</h3>
+          <label>API Key<input type="password" id="setKey" placeholder="sk-..." autocomplete="off"></label>
+          <label>接口地址 Base URL<input id="setBase" placeholder="留空默认 https://api.openai.com/v1"></label>
+          <label>模型<input id="setModel" placeholder="如 gpt-4o-mini / deepseek-chat / moonshot-v1-8k"></label>
+          <div class="m-note">🔒 密钥只保存在本机浏览器 localStorage，页面直连 API（OpenAI 兼容格式 /chat/completions），不经过任何中间服务器。若报 CORS / 网络错误，说明该服务商不允许浏览器直接调用，需要一个本地代理。配置后进入 <b>API 模式</b>：三个会话标签变为真实对话线程，记忆真实写入并持久化。</div>
+          <div class="m-msg" id="setMsg"></div>
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+            <button class="tbtn ghost" id="setTest">测试连接</button>
+            <button class="tbtn ghost" id="setClear">清除密钥 · 回到演示模式</button>
+            <button class="tbtn primary" id="setSave" style="margin-left:auto;">保存并启用</button>
+          </div>
+        </div>
+
+        <div class="set-card">
+          <h3>🐣 宠物设置</h3>
+          <label class="switch-row"><input type="checkbox" id="petIdle" checked style="width:auto;"> 闲置时每 90 秒主动冒泡，提示当前工作台该注意的事</label>
+          <button class="tbtn primary" id="quizOpen" style="margin-top:4px;">🎮 记忆问答 · 记忆错乱自检</button>
+          <p class="set-hint">从记忆库随机抽 5 题：你的印象与记忆库一致吗？答错的条目会被列出，可直接点开复核——你的记忆和助理的记忆，总得对齐一个。</p>
+        </div>
+      </div>
+    </section>
+
     <!-- 记忆详情抽屉 -->
     <div class="drawer-mask" id="drawerMask"></div>
     <div class="drawer" id="drawer"></div>
@@ -496,22 +597,18 @@
 
     <div class="toast" id="toast"></div>
 
-    <!-- API 设置弹窗 -->
-    <div class="modal-mask" id="settingsMask">
-      <div class="modal">
-        <div class="m-head"><h3>⚙️ 接入真实大模型</h3><button class="d-close" id="setClose">✕</button></div>
-        <div class="m-body">
-          <label>API Key<input type="password" id="setKey" placeholder="sk-..." autocomplete="off"></label>
-          <label>接口地址 Base URL<input id="setBase" placeholder="留空默认 https://api.openai.com/v1"></label>
-          <label>模型<input id="setModel" placeholder="如 gpt-4o-mini / deepseek-chat / moonshot-v1-8k"></label>
-          <div class="m-note">🔒 密钥只保存在本机浏览器 localStorage，页面直连 API（OpenAI 兼容格式 /chat/completions），不经过任何中间服务器。若报 CORS / 网络错误，说明该服务商不允许浏览器直接调用，需要一个本地代理。配置后页面进入 <b>API 模式</b>：三个会话标签变为三个真实对话线程，记忆真实写入并持久化（刷新页面仍在）。</div>
-          <div class="m-msg" id="setMsg"></div>
-        </div>
-        <div class="m-foot">
-          <button class="tbtn ghost" id="setTest">测试连接</button>
-          <button class="tbtn ghost" id="setClear">清除密钥 · 回到演示模式</button>
-          <button class="tbtn primary" id="setSave" style="margin-left:auto;">保存并启用</button>
-        </div>
+    <!-- 桌面宠物 & 气泡 -->
+    <div class="pet-bubble" id="petBubble"></div>
+    <div class="pet" id="pet" title="小默 · 你的记忆伙伴">
+      <div class="p-body"><span class="p-leaf"></span><span class="p-eye l"></span><span class="p-eye r"></span><span class="p-cheek l"></span><span class="p-cheek r"></span><span class="p-mouth"></span></div>
+      <span class="p-dot" id="petDot" style="display:none"></span>
+    </div>
+
+    <!-- 记忆问答（记忆错乱自检） -->
+    <div class="modal-mask" id="quizMask">
+      <div class="modal" style="width:min(520px,94%);">
+        <div class="m-head"><h3>🎮 记忆问答 · 记忆错乱自检</h3><button class="d-close" id="quizClose">✕</button></div>
+        <div class="m-body" id="quizBody" style="max-height:440px;overflow-y:auto;"></div>
       </div>
     </div>
   </main>
@@ -588,6 +685,7 @@ const state = {
   crossConfirmed:false,
 };
 const TRANSCRIPTS = { s1:[], s2:[], s3:[] };  // 每个会话的聊天 HTML（持久保留）
+const SESSION_RECORDED = { s1:[], s2:[], s3:[] };  // 每个会话新写入的记忆 id（供宠物提示）
 
 const SESS_META = {
   s1:{ label:'会话 1 · 9月3日 · 当前项目：AI笔记 App 2.0' },
@@ -709,6 +807,8 @@ function step_s1a(){
        <div style="margin-top:8px;">这条记忆已进入记忆库（左上角计数 +1）。下次新会话我会自动带上它。</div>`
     );
     state.steps.s1a = true; afterStep('s1');
+    SESSION_RECORDED.s1.push(id);
+    window.petCelebrate && petCelebrate();
     toast('✅ 记忆已写入记忆库 · 出处与版本历史已建立');
   }, 550);
 }
@@ -737,6 +837,8 @@ function step_s1b(){
     PROJECTS[0].ddl = '9月27日';
     PROJECTS[0].activity = '9月3日 · 新增 2 条决策记忆 · 风险同步';
     state.steps.s1b = true; afterStep('s1');
+    SESSION_RECORDED.s1.push(id);
+    window.petCelebrate && petCelebrate();
     toast('✅ 第 2 条记忆入库 · 项目进展表已联动更新');
   }, 550);
 }
@@ -1101,6 +1203,7 @@ const VIEW_TITLES = {
   projects: ['项目进展表','4 个进行中 · 与记忆库实时联动'],
   memory:   ['记忆库',    '记忆的透明账本：出处 / 版本 / 被引用 / 可纠正'],
   kb:       ['知识库',    '47 篇文档 · 由记忆自动整理'],
+  settings: ['个人主页与设置','API 接入 · 宠物设置 · 记忆问答'],
 };
 function switchView(v){
   document.querySelectorAll('.view').forEach(el=>el.classList.toggle('active', el.id==='view-'+v));
@@ -1258,7 +1361,7 @@ async function apiSend(text){
     TRANSCRIPTS[sid].pop();
     TRANSCRIPTS[sid].push(aiBubble(
       `⚠️ 调用失败：${esc(String(err && err.message || err))}<br>` +
-      `<span style="font-size:12px;color:var(--text-2)">检查右上角「⚙️ 接入 API」里的密钥 / 接口地址 / 模型名。如果是 CORS 或 Failed to fetch，说明该服务商不允许浏览器直连，需要一个本地代理转发。</span>`
+      `<span style="font-size:12px;color:var(--text-2)">检查「个人主页」里的密钥 / 接口地址 / 模型名。如果是 CORS 或 Failed to fetch，说明该服务商不允许浏览器直连，需要一个本地代理转发。</span>`
     ));
   }
   renderChat();
@@ -1279,6 +1382,8 @@ document.getElementById('chatScroll').addEventListener('click', e=>{
         citedBy:[], isNew:true,
       });
       persistMem(); refreshMemViews();
+      if(SESSION_RECORDED[state.session]) SESSION_RECORDED[state.session].push(id);
+      window.petCelebrate && petCelebrate();
       const card = save.closest('.mem-card');
       card.classList.add('saved');
       card.querySelector('.mc-actions').innerHTML = '<span style="font-size:11.5px;color:#1f8a3d;font-weight:600;">✓ 已入库 · 可在记忆库查看 / 纠正</span>';
@@ -1319,23 +1424,19 @@ function initApiMode(){
   $('#guide').style.display = 'none';
   $('#modeBadge').textContent = 'API 模式 · OpenAI 兼容';
   $('#modeBadge').classList.add('api');
-  $('#gearBtn').textContent = '⚙️ API 设置';
+  const mb2 = document.getElementById('modeBadge2');
+  if(mb2){ mb2.textContent = 'API 模式 · OpenAI 兼容'; mb2.classList.add('api'); }
+  document.body.classList.add('api');
   $('#tbSub').textContent = SESS_META[state.session].label;
   renderChat(); refreshMemViews();
 }
 
-/* ---------- 设置弹窗 ---------- */
-const setMask = document.getElementById('settingsMask');
-function openSettings(){
+/* ---------- 设置（个人主页页内，id 与表单直接对应） ---------- */
+(function fillSettings(){
   document.getElementById('setKey').value = SETTINGS?.apiKey || '';
   document.getElementById('setBase').value = SETTINGS?.baseURL || '';
   document.getElementById('setModel').value = SETTINGS?.model || '';
-  document.getElementById('setMsg').textContent = '';
-  setMask.classList.add('show');
-}
-document.getElementById('gearBtn').addEventListener('click', openSettings);
-document.getElementById('setClose').addEventListener('click', ()=>setMask.classList.remove('show'));
-setMask.addEventListener('click', e=>{ if(e.target===setMask) setMask.classList.remove('show'); });
+})();
 
 document.getElementById('setSave').addEventListener('click', ()=>{
   const key = document.getElementById('setKey').value.trim();
@@ -1346,7 +1447,6 @@ document.getElementById('setSave').addEventListener('click', ()=>{
     model: document.getElementById('setModel').value.trim(),
   };
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(SETTINGS));
-  setMask.classList.remove('show');
   if(!window.API_MODE) initApiMode();
   toast('✅ API 模式已启用 · 三个会话标签现在是三个真实对话线程');
 });
@@ -1354,7 +1454,6 @@ document.getElementById('setSave').addEventListener('click', ()=>{
 document.getElementById('setClear').addEventListener('click', ()=>{
   localStorage.removeItem(SETTINGS_KEY);
   localStorage.removeItem(THREAD_KEY);
-  setMask.classList.remove('show');
   location.reload();
 });
 
@@ -1381,6 +1480,157 @@ document.getElementById('setTest').addEventListener('click', async ()=>{
 
 /* ---------- 启动：已配置过密钥则直接进入 API 模式 ---------- */
 if(SETTINGS && SETTINGS.apiKey){ initApiMode(); }
+</script>
+
+<script>
+/* =====================================================================
+ * 第三段：折叠分区 + 桌面宠物「小默」+ 记忆问答
+ * ===================================================================== */
+
+/* ---------- 侧边栏折叠 ---------- */
+document.querySelectorAll('.side-label.collapsible').forEach(l=>{
+  l.addEventListener('click', ()=>{
+    l.classList.toggle('collapsed');
+    document.getElementById(l.dataset.collapse).classList.toggle('collapsed');
+  });
+});
+
+/* ---------- 宠物：按当前工作台切换提示 ---------- */
+let CURRENT_VIEW = 'chat';
+const _origSwitchView = switchView;
+switchView = function(v){ _origSwitchView(v); CURRENT_VIEW = v; updatePetDot(); if(petBubbleOpen) renderPetBubble(); };
+
+const petEl = document.getElementById('pet'), petBubble = document.getElementById('petBubble');
+let petBubbleOpen = false;
+const DEMO_TODAY = new Date(2026, 8, 20);  // 演示时间基准：9月20日
+
+function memAgeDays(m){
+  const mm = /^(\d+)月(\d+)日$/.exec(m.date || '');
+  if(!mm) return 0;
+  return Math.round((DEMO_TODAY - new Date(2026, mm[1]-1, mm[2])) / 86400000);
+}
+function expiringMemories(){ return MEMSTORE.filter(m=>memAgeDays(m) >= 14 && m.status !== '已纠正'); }
+
+function petViewContent(){
+  switch(CURRENT_VIEW){
+    case 'chat':{
+      const mems = (SESSION_RECORDED[state.session]||[]).map(findMem).filter(Boolean);
+      if(!mems.length) return {icon:'💬', title:'对话助手', text:'本次会话还没有新记录的记忆。对我说「这个你记着」，就能立刻记下一条。', items:[]};
+      return {icon:'💬', title:'对话助手', text:`本次会话已记录 <b>${mems.length}</b> 条记忆（点击查看出处与版本）：`, items:mems.map(m=>({mid:m.id, text:'🧠 '+m.title}))};
+    }
+    case 'memory':{
+      const exp = expiringMemories();
+      if(!exp.length) return {icon:'🧠', title:'记忆库', text:'所有记忆都很新鲜，暂无临期记忆。👍', items:[]};
+      return {icon:'🧠', title:'记忆库 · 临期提醒', text:`<b>${exp.length}</b> 条记忆已超过 14 天未验证，可能过时，建议点开复核：`, items:exp.map(m=>({mid:m.id, text:'⏳ '+m.title+' · '+m.date+'（'+memAgeDays(m)+' 天前）'}))};
+    }
+    case 'kb':
+      return {icon:'📚', title:'知识库 · 更新提醒', text:'《块编辑技术选型》由 6 条记忆生成，9月7日后未更新；「A/B 实验数据快报」依赖的实验 9月12日已出结论 —— 建议复核并整理更新，别让文档跑赢记忆。', items:[]};
+    case 'projects':{
+      const risks = PROJECTS.filter(p=>p.pill[0]==='risk');
+      return {icon:'📊', title:'项目进展', text:`<b>${risks.length}</b> 个项目存在风险：${risks.map(p=>p.name).join('、')}。「官网改版」的素材待办已过期，建议优先跟进。`, items:[]};
+    }
+    case 'settings':
+      return {icon:'⚙️', title:'个人主页', text: window.API_MODE ? 'API 已接入，记忆真实写入并持久化。来一局记忆问答，看看咱俩谁记得准 →' : '还没接入 API（演示模式）。先来一局记忆问答热热身 →', items:[]};
+  }
+  return {icon:'🐣', title:'小默', text:'我在～', items:[]};
+}
+
+function renderPetBubble(){
+  const c = petViewContent();
+  petBubble.innerHTML =
+    `<div class="pb-head">${c.icon} ${c.title}<span style="margin-left:auto;font-size:10px;color:var(--text-3);font-weight:500;">小默</span></div>
+     <div class="pb-body">${c.text}${c.items.length?'<div style="margin-top:8px;">'+c.items.map(i=>`<div class="pb-item" data-mid="${i.mid}">${i.text}</div>`).join('')+'</div>':''}</div>
+     <div class="pb-foot"><button class="primary" id="pbQuiz">🎮 记忆问答</button><button id="pbClose">知道了</button></div>`;
+}
+petEl.addEventListener('click', ()=>{
+  petBubbleOpen = !petBubbleOpen;
+  petBubble.classList.toggle('show', petBubbleOpen);
+  if(petBubbleOpen) renderPetBubble();
+});
+petBubble.addEventListener('click', e=>{
+  if(e.target.id==='pbClose'){ petBubbleOpen=false; petBubble.classList.remove('show'); }
+  if(e.target.id==='pbQuiz'){ petBubbleOpen=false; petBubble.classList.remove('show'); startQuiz(); }
+  const it = e.target.closest('.pb-item');
+  if(it && it.dataset.mid){ petBubbleOpen=false; petBubble.classList.remove('show'); openDrawer(it.dataset.mid); }
+});
+window.petCelebrate = function(){
+  petEl.classList.remove('celebrate'); void petEl.offsetWidth; petEl.classList.add('celebrate');
+};
+function updatePetDot(){
+  const n = expiringMemories().length;
+  const dot = document.getElementById('petDot');
+  dot.style.display = n ? 'flex' : 'none';
+  dot.textContent = n;
+}
+/* 闲置冒泡（可在个人主页关闭） */
+setInterval(()=>{
+  const idleOn = document.getElementById('petIdle');
+  if(idleOn && !idleOn.checked) return;
+  if(petBubbleOpen || document.querySelector('.modal-mask.show') || document.querySelector('.drawer.show')) return;
+  petBubbleOpen = true; renderPetBubble(); petBubble.classList.add('show');
+}, 90000);
+
+/* 记忆库数量变化时同步宠物红点与个人主页计数 */
+const _origUpdateCounts = updateCounts;
+updateCounts = function(){
+  _origUpdateCounts();
+  const el = document.getElementById('setMemCount'); if(el) el.textContent = MEMSTORE.length;
+  updatePetDot();
+};
+
+/* ---------- 记忆问答：记忆错乱自检 ---------- */
+let quiz = null;
+function startQuiz(){
+  quiz = { n:0, ok:0, wrong:[], current:null };
+  document.getElementById('quizMask').classList.add('show');
+  nextQuestion();
+}
+function nextQuestion(){
+  const pool = MEMSTORE.filter(m=>m.body && m.body.length>15);
+  if(quiz.n >= 5 || pool.length < 4){ return quizResult(pool.length); }
+  const m = pool[Math.floor(Math.random()*pool.length)];
+  const distract = pool.filter(x=>x.id!==m.id).sort(()=>Math.random()-.5).slice(0,3).map(x=>x.body);
+  const opts = [...distract, m.body].sort(()=>Math.random()-.5);
+  quiz.current = { m, opts };
+  quiz.n++;
+  document.getElementById('quizBody').innerHTML =
+    `<div style="font-size:11px;color:var(--text-3);margin-bottom:6px;">第 ${quiz.n} 题 / 共 5 题 · 已答对 ${quiz.ok}</div>
+     <div style="font-size:13.5px;font-weight:600;line-height:1.6;margin-bottom:10px;">凭你的记忆：记忆库里「<span style="color:var(--blue)">${esc(m.title)}</span>」（${esc(m.proj)} · ${esc(m.date)}）记录的是哪一条？</div>` +
+    opts.map((o,i)=>`<button class="quiz-opt" data-i="${i}">${esc(o.slice(0,90))}${o.length>90?'…':''}</button>`).join('');
+}
+document.getElementById('quizBody').addEventListener('click', e=>{
+  const b = e.target.closest('.quiz-opt'); if(!b || !quiz || !quiz.current) return;
+  const { m, opts } = quiz.current;
+  if(opts[+b.dataset.i] === m.body) quiz.ok++; else quiz.wrong.push(m);
+  document.querySelectorAll('#quizBody .quiz-opt').forEach(x=>{
+    const isRight = opts[+x.dataset.i] === m.body;
+    if(isRight) x.classList.add('right'); else if(x===b) x.classList.add('wrong');
+    x.disabled = true;
+  });
+  setTimeout(()=>{ quiz.current = null; nextQuestion(); }, 900);
+});
+function quizResult(poolSize){
+  const wrong = quiz.wrong;
+  document.getElementById('quizBody').innerHTML =
+    `<div style="text-align:center;padding:10px 0;">
+      <div style="font-size:34px;">${wrong.length===0?'🏆':wrong.length<=2?'👍':'🧠'}</div>
+      <div style="font-size:16px;font-weight:700;margin:8px 0 4px;">${quiz.n} 题答对 ${quiz.ok} 题</div>
+      <div style="font-size:12.5px;color:var(--text-2);line-height:1.6;">${wrong.length===0 ? '你的印象与记忆库完全一致，没有记忆错乱迹象。' : '以下 '+wrong.length+' 条，你的印象与记忆库<b>不一致</b>——你的记忆可能发生了错乱（也可能是记忆库错了），点开复核：'}</div>
+    </div>` +
+    wrong.map(m=>`<div class="pb-item" data-mid="${m.id}">🔍 ${esc(m.title)} · ${esc(m.date)}（点我查看记忆库中的真实记录）</div>`).join('') +
+    `<div style="display:flex;gap:8px;margin-top:10px;"><button class="tbtn ghost" id="quizAgain" style="flex:1;">再来一局</button><button class="tbtn primary" id="quizDone" style="flex:1;">完成</button></div>`;
+  document.getElementById('quizAgain').onclick = startQuiz;
+  document.getElementById('quizDone').onclick = ()=>document.getElementById('quizMask').classList.remove('show');
+}
+document.getElementById('quizClose').addEventListener('click', ()=>document.getElementById('quizMask').classList.remove('show'));
+document.getElementById('quizMask').addEventListener('click', e=>{ if(e.target.id==='quizMask') e.target.classList.remove('show'); });
+document.getElementById('quizOpen').addEventListener('click', startQuiz);
+document.getElementById('quizBody').addEventListener('click', e=>{
+  const it = e.target.closest('.pb-item');
+  if(it && it.dataset.mid){ document.getElementById('quizMask').classList.remove('show'); openDrawer(it.dataset.mid); }
+});
+
+updatePetDot();
 </script>
 </body>
 </html>
